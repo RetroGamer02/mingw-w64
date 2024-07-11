@@ -88,7 +88,24 @@ extern "C" {
 #endif
 #endif
 
-#include <_mingw_off_t.h>
+#ifndef _OFF_T_DEFINED
+#define _OFF_T_DEFINED
+#ifndef _OFF_T_
+#define _OFF_T_
+  typedef long _off_t;
+#if !defined(NO_OLDNAMES) || defined(_POSIX)
+  typedef long off_t;
+#endif
+#endif
+#endif
+
+#ifndef _OFF64_T_DEFINED
+#define _OFF64_T_DEFINED
+  __MINGW_EXTENSION typedef long long _off64_t;
+#if !defined(NO_OLDNAMES) || defined(_POSIX)
+  __MINGW_EXTENSION typedef long long off64_t;
+#endif
+#endif
 
 _CRTIMP FILE *__cdecl __acrt_iob_func(unsigned index);
 #ifndef _STDIO_DEFINED
@@ -624,8 +641,7 @@ int vsnprintf (char *__stream, size_t __n, const char *__format, __builtin_va_li
   int __cdecl fflush(FILE *_File);
   int __cdecl fgetc(FILE *_File);
   _CRTIMP int __cdecl _fgetchar(void);
-  int __cdecl fgetpos(FILE * __restrict__ _File ,fpos_t * __restrict__ _Pos); /* 64bit only, no 32bit version */
-  int __cdecl fgetpos64(FILE * __restrict__ _File ,fpos_t * __restrict__ _Pos); /* fgetpos already 64bit */
+  int __cdecl fgetpos(FILE * __restrict__ _File ,fpos_t * __restrict__ _Pos);
   char *__cdecl fgets(char * __restrict__ _Buf,int _MaxCount,FILE * __restrict__ _File);
   _CRTIMP int __cdecl _fileno(FILE *_File);
 #ifdef _POSIX_
@@ -641,8 +657,8 @@ int vsnprintf (char *__stream, size_t __n, const char *__format, __builtin_va_li
   size_t __cdecl fread(void * __restrict__ _DstBuf,size_t _ElementSize,size_t _Count,FILE * __restrict__ _File);
   FILE *__cdecl freopen(const char * __restrict__ _Filename,const char * __restrict__ _Mode,FILE * __restrict__ _File) __MINGW_ATTRIB_DEPRECATED_SEC_WARN;
   int __cdecl fsetpos(FILE *_File,const fpos_t *_Pos);
-  int __cdecl fsetpos64(FILE *_File,const fpos_t *_Pos); /* fsetpos already 64bit */
   int __cdecl fseek(FILE *_File,long _Offset,int _Origin);
+<<<<<<< HEAD
   long __cdecl ftell(FILE *_File);
 
   /* Shouldn't be any fseeko32 in glibc, 32bit to 64bit casting should be fine */
@@ -684,6 +700,13 @@ int vsnprintf (char *__stream, size_t __n, const char *__format, __builtin_va_li
 #endif /* (defined(_FILE_OFFSET_BITS) && (_FILE_OFFSET_BITS == 64)) */
 #endif /* _FILE_OFFSET_BITS_SET_FTELLO */
 
+=======
+  int fseeko64(FILE* stream, _off64_t offset, int whence);
+  long __cdecl ftell(FILE *_File);
+  _off64_t ftello64(FILE * stream);
+  __MINGW_EXTENSION int __cdecl _fseeki64(FILE *_File,__int64 _Offset,int _Origin);
+  __MINGW_EXTENSION __int64 __cdecl _ftelli64(FILE *_File);
+>>>>>>> parent of 4d3b28a99 (Add LFS64 support.)
   size_t __cdecl fwrite(const void * __restrict__ _Str,size_t _Size,size_t _Count,FILE * __restrict__ _File);
   int __cdecl getc(FILE *_File);
   int __cdecl getchar(void);

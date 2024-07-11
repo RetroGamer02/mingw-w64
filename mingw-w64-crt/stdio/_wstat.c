@@ -1,7 +1,10 @@
 #define __CRT__NO_INLINE
 #include <sys/stat.h>
+<<<<<<< HEAD
 #include <stdlib.h>
 #include <malloc.h>
+=======
+>>>>>>> parent of 4d3b28a99 (Add LFS64 support.)
 
 /**
  * Returns _path without trailing slash if any

@@ -57,21 +57,15 @@ int __cdecl __MINGW_NOTHROW usleep(useconds_t);
 /* This is defined as a real library function to allow autoconf
    to verify its existence. */
 #if !defined(NO_OLDNAMES) || defined(_POSIX)
-int ftruncate(int, off32_t);
-int ftruncate64(int, off64_t);
-int truncate(const char *, off32_t);
-int truncate64(const char *, off64_t);
+int ftruncate(int, off_t);
 #ifndef __CRT__NO_INLINE
-__CRT_INLINE int ftruncate(int __fd, off32_t __length)
+__CRT_INLINE int ftruncate(int __fd, off_t __length)
 {
   return _chsize (__fd, __length);
 }
 #endif /* !__CRT__NO_INLINE */
 #else
 int ftruncate(int, _off_t);
-int ftruncate64(int, _off64_t);
-int truncate(const char *, _off_t);
-int truncate64(const char *, _off64_t);
 #ifndef __CRT__NO_INLINE
 __CRT_INLINE int ftruncate(int __fd, _off_t __length)
 {
@@ -81,6 +75,7 @@ __CRT_INLINE int ftruncate(int __fd, _off_t __length)
 #endif
 #endif /* FTRUNCATE_DEFINED */
 
+<<<<<<< HEAD
 #ifndef _FILE_OFFSET_BITS_SET_FTRUNCATE
 #define _FILE_OFFSET_BITS_SET_FTRUNCATE
 #if (defined(_FILE_OFFSET_BITS) && (_FILE_OFFSET_BITS == 64))
@@ -100,6 +95,8 @@ __CRT_INLINE int ftruncate(int __fd, _off_t __length)
 #endif
 #endif /* _CRT_USE_WINAPI_FAMILY_DESKTOP_APP || WINSTORECOMPAT */
 
+=======
+>>>>>>> parent of 4d3b28a99 (Add LFS64 support.)
 #ifdef __cplusplus
 }
 #endif

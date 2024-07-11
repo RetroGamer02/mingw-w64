@@ -78,7 +78,26 @@ typedef _mode_t	mode_t;
 #endif
 #endif	/* Not _MODE_T_ */
 
-#include <_mingw_off_t.h>
+#ifndef _OFF_T_DEFINED
+#define _OFF_T_DEFINED
+#ifndef _OFF_T_
+#define _OFF_T_
+typedef long	_off_t;
+#if !defined(NO_OLDNAMES) || defined(_POSIX)
+typedef long	off_t;
+#endif
+#endif	/* Not _OFF_T_ */
+#endif	/* _OFF_T_DEFINED */
+
+#ifndef _OFF64_T_DEFINED
+#define _OFF64_T_DEFINED
+__MINGW_EXTENSION
+typedef long long _off64_t;
+#if !defined(NO_OLDNAMES) || defined(_POSIX)
+__MINGW_EXTENSION
+typedef long long off64_t;
+#endif
+#endif
 
 #ifndef __NO_ISOCEXT
 typedef unsigned int useconds_t;
