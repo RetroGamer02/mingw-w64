@@ -48,7 +48,11 @@ extern "C" {
 #ifdef _MSVCRT_
 #define __pctype_func() (_pctype)
 #else
+#ifdef _UCRT
+  _CRTIMP unsigned short* __pctype_func(void);
+#else
 #define __pctype_func() (* __MINGW_IMP_SYMBOL(_pctype))
+#endif
 #endif
 #endif
 
@@ -56,8 +60,12 @@ extern "C" {
 #ifdef _MSVCRT_
   extern unsigned short *_pctype;
 #else
+#ifdef _UCRT
+#define _pctype (__pctype_func())
+#else
   extern unsigned short ** __MINGW_IMP_SYMBOL(_pctype);
 #define _pctype (* __MINGW_IMP_SYMBOL(_pctype))
+#endif
 #endif
 #endif
 
@@ -67,7 +75,7 @@ extern "C" {
 #ifndef _CRT_WCTYPEDATA_DEFINED
 #define _CRT_WCTYPEDATA_DEFINED
 #ifndef _CTYPE_DISABLE_MACROS
-#ifndef _wctype
+#if !defined(_wctype) && defined(_CRT_USE_WINAPI_FAMILY_DESKTOP_APP)
 #ifdef _MSVCRT_
   extern unsigned short *_wctype;
 #else
@@ -120,8 +128,10 @@ extern "C" {
   wint_t __cdecl towupper(wint_t);
   wint_t __cdecl towlower(wint_t);
   int __cdecl iswctype(wint_t,wctype_t);
+#if __MSVCRT_VERSION__ >= 0x800
   _CRTIMP int __cdecl __iswcsymf(wint_t);
   _CRTIMP int __cdecl __iswcsym(wint_t);
+#endif
   int __cdecl is_wctype(wint_t,wctype_t);
 #if (defined (__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || !defined (NO_OLDNAMES) || defined (__cplusplus)
 int __cdecl iswblank(wint_t _C);

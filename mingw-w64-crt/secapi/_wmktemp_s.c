@@ -2,10 +2,8 @@
 #include <malloc.h>
 #include <errno.h>
 #include <msvcrt.h>
+#include <sec_api/wchar_s.h>
 
-size_t __cdecl wcsnlen (const wchar_t *, size_t);
-char * __cdecl _wmktemp (wchar_t *);
-errno_t __cdecl _wmktemp_s (wchar_t *, size_t);
 static errno_t __cdecl _int_wmktemp_s (wchar_t *, size_t);
 static errno_t __cdecl _stub (wchar_t *, size_t);
 

@@ -2,9 +2,8 @@
 #include <malloc.h>
 #include <errno.h>
 #include <msvcrt.h>
+#include <sec_api/conio_s.h>
 
-wchar_t * __cdecl _cgetws (wchar_t *);
-errno_t __cdecl _cgetws_s (wchar_t *, size_t, size_t *);
 static errno_t __cdecl _int_cgetws_s (wchar_t *, size_t, size_t *);
 static errno_t __cdecl _stub (wchar_t *, size_t, size_t *);
 

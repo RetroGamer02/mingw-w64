@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2013 mingw-w64 project
+    Copyright (c) 2013-2016 mingw-w64 project
 
     Contributing authors: Jean-Baptiste Kempf
 
@@ -65,7 +65,14 @@ DWORD WINAPI TlsAlloc (void)
     return FlsAlloc (__ic_fls_free);
 }
 
-DWORD (WINAPI *__MINGW_IMP_SYMBOL(TlsAlloc))(void) asm("__imp__TlsAlloc@0") = TlsAlloc;
-WINBOOL (WINAPI *__MINGW_IMP_SYMBOL(TlsFree))(DWORD) asm("__imp__TlsFree@4") = TlsFree;
-WINBOOL (WINAPI *__MINGW_IMP_SYMBOL(TlsSetValue))(DWORD, LPVOID) asm("__imp__TlsSetValue@8") = TlsSetValue;
-LPVOID (WINAPI *__MINGW_IMP_SYMBOL(TlsGetValue))(DWORD) asm("__imp__TlsGetValue@4") = TlsGetValue;
+#ifdef _X86_
+DWORD (WINAPI *__MINGW_IMP_SYMBOL(TlsAlloc))(void) __asm__("__imp__TlsAlloc@0") = TlsAlloc;
+WINBOOL (WINAPI *__MINGW_IMP_SYMBOL(TlsFree))(DWORD) __asm__("__imp__TlsFree@4") = TlsFree;
+WINBOOL (WINAPI *__MINGW_IMP_SYMBOL(TlsSetValue))(DWORD, LPVOID) __asm__("__imp__TlsSetValue@8") = TlsSetValue;
+LPVOID (WINAPI *__MINGW_IMP_SYMBOL(TlsGetValue))(DWORD) __asm__("__imp__TlsGetValue@4") = TlsGetValue;
+#else
+DWORD (WINAPI *__MINGW_IMP_SYMBOL(TlsAlloc))(void) __asm__("__imp_TlsAlloc") = TlsAlloc;
+WINBOOL (WINAPI *__MINGW_IMP_SYMBOL(TlsFree))(DWORD) __asm__("__imp_TlsFree") = TlsFree;
+WINBOOL (WINAPI *__MINGW_IMP_SYMBOL(TlsSetValue))(DWORD, LPVOID) __asm__("__imp_TlsSetValue") = TlsSetValue;
+LPVOID (WINAPI *__MINGW_IMP_SYMBOL(TlsGetValue))(DWORD) __asm__("__imp_TlsGetValue") = TlsGetValue;
+#endif

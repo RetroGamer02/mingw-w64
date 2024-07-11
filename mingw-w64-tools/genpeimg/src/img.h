@@ -1,6 +1,6 @@
 /*
     genpeimg - Modify Portable Executable flags and properties.
-    Copyright (C) 2009, 2010, 2011, 2012, 2013  mingw-w64 project
+    Copyright (C) 2009-2016 mingw-w64 project
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -66,7 +66,7 @@ typedef struct pe_image {
   } pe_filehdr;
   size_t optional_hdr_pos;
   size_t section_list;
-  size_t section_list_sz; /* Each section entry has 36 bytes size.  */
+  size_t section_list_sz; /* Each section entry has 40 bytes size.  */
   int is_64bit : 1;
   int is_bigendian : 1;
 } pe_image;
@@ -78,6 +78,7 @@ void peimg_show (pe_image *ppeimg, FILE *outfp);
 
 void peimg_set_hdr_characeristics (pe_image *pe, unsigned short set, unsigned short mask);
 void peimg_set_hdr_opt_dll_characteristics (pe_image *pe, unsigned short set, unsigned short mask);
+void peimg_set_hdr_opt_subsystem (pe_image *pe, unsigned short subsystem);
 
 #define PEIMG_GET_UCHAR(PEIMG, POS)  fimg_get_uchar_at ((PEIMG)->pimg, ((PEIMG)->start_pe + (POS)))
 #define PEIMG_GET_USHORT(PEIMG, POS)  fimg_get_ushort_at ((PEIMG)->pimg, ((PEIMG)->start_pe + (POS)), (PEIMG)->is_bigendian)

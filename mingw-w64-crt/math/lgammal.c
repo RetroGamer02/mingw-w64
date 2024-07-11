@@ -5,6 +5,15 @@
  */
 #include "cephes_mconf.h"
 
+#if defined(__arm__) || defined(_ARM_) || defined(__aarch64__) || defined(_ARM64_)
+double lgamma(double x);
+
+long double lgammal(long double x)
+{
+	return lgamma(x);
+}
+#else
+
 #if UNK
 static uLD S[9] = {
   { { -1.193945051381510095614E-3L } },
@@ -198,11 +207,11 @@ static uLD C[] = {
 
 /* log( sqrt( 2*pi ) ) */
 static const long double LS2PI  =  0.91893853320467274178L;
-#if defined(__arm__) || defined(_ARM_)
+#if defined(__arm__) || defined(_ARM_) || defined(__aarch64__) || defined(_ARM64_)
 #define MAXLGM 2.035093e36
 #else
 #define MAXLGM 1.04848146839019521116e+4928L
-#endif /* defined(__arm__) || defined(_ARM_) */
+#endif /* defined(__arm__) || defined(_ARM_) || defined(__aarch64__) || defined(_ARM64_) */
 
 /* Logarithm of gamma function */
 /* Reentrant version */ 
@@ -216,7 +225,7 @@ long double __lgammal_r(long double x, int* sgngaml)
 	*sgngaml = 1;
 #ifdef NANS
 	if (isnanl(x))
-		return(NANL);
+		return x;
 #endif
 #ifdef INFINITIES
 	if (!isfinitel(x))
@@ -334,4 +343,4 @@ long double lgammal(long double x)
 {
 	return (__lgammal_r (x, &signgam));
 }
-
+#endif

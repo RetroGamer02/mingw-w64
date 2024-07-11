@@ -10,8 +10,10 @@ void _fpreset (void)
 {
 #if defined(_ARM_) || defined(__arm__)
   __asm__ __volatile__ (
-    "mov	r0, #0x00\n\t" /* INITIAL_FPSCR */
-    "vmsr	fpscr, r0\n\t");
+    "vmsr	fpscr, %0\n\t" : : "r"(0 /* INITIAL_FPSCR */));
+#elif defined(_ARM64_) || defined(__aarch64__)
+  __asm__ __volatile__ (
+    "msr	fpcr, %0\n\t" : : "r"(0LL /* INITIAL_FPSCR */));
 #else
 #ifdef __GNUC__
   __asm__ ("fninit");

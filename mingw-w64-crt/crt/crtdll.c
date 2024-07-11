@@ -40,15 +40,15 @@ extern _CRTALLOC(".CRT$XIZ") _PIFV __xi_z[];
 extern _CRTALLOC(".CRT$XCA") _PVFV __xc_a[];
 extern _CRTALLOC(".CRT$XCZ") _PVFV __xc_z[];
 
+
 /* TLS initialization hook.  */
 extern const PIMAGE_TLS_CALLBACK __dyn_tls_init_callback;
 
 static int __proc_attached = 0;
 
-extern _PVFV *__onexitbegin;
-extern _PVFV *__onexitend;
+static _onexit_table_t atexit_table;
 
-extern int mingw_app_type;
+extern int __mingw_app_type;
 
 extern WINBOOL WINAPI DllMain (HANDLE hDllHandle, DWORD dwReason, LPVOID lpreserved);
 
@@ -61,15 +61,7 @@ _CRTALLOC(".CRT$XIAA") _PIFV pcinit = pre_c_init;
 static int
 pre_c_init (void)
 {
-  _PVFV *onexitbegin;
-
-  onexitbegin = (_PVFV *) malloc (32 * sizeof (_PVFV));
-  __onexitend = __onexitbegin = (_PVFV *) _encode_pointer (onexitbegin);
-
-  if (onexitbegin == NULL)
-    return 1;
-  *onexitbegin = (_PVFV) NULL;
-  return 0;
+  return _initialize_onexit_table(&atexit_table);
 }
 
 WINBOOL WINAPI _CRT_INIT (HANDLE hDllHandle, DWORD dwReason, LPVOID lpreserved)
@@ -135,16 +127,7 @@ WINBOOL WINAPI _CRT_INIT (HANDLE hDllHandle, DWORD dwReason, LPVOID lpreserved)
 	}
       else
 	{
-	  _PVFV * onexitbegin = (_PVFV *) _decode_pointer (__onexitbegin);
-	  if (onexitbegin)
-	    {
-	      _PVFV *onexitend = (_PVFV *) _decode_pointer (__onexitend);
-	      while (--onexitend >= onexitbegin)
-		if (*onexitend != NULL)
-		  (**onexitend) ();
-	      free (onexitbegin);
-	      __onexitbegin = __onexitend = (_PVFV *) NULL;
-	    }
+          _execute_onexit_table(&atexit_table);
 	  __native_startup_state = __uninitialized;
 	  (void) InterlockedExchangePointer ((volatile PVOID *) &__native_startup_lock, 0);
 	}
@@ -155,16 +138,18 @@ WINBOOL WINAPI _CRT_INIT (HANDLE hDllHandle, DWORD dwReason, LPVOID lpreserved)
 static WINBOOL __DllMainCRTStartup (HANDLE, DWORD, LPVOID);
 
 WINBOOL WINAPI DllMainCRTStartup (HANDLE, DWORD, LPVOID);
+#if defined(__x86_64__) && !defined(__SEH__)
 int __mingw_init_ehandler (void);
+#endif
 
+__attribute__((used)) /* required due to bug in gcc / ld */
 WINBOOL WINAPI
 DllMainCRTStartup (HANDLE hDllHandle, DWORD dwReason, LPVOID lpreserved)
 {
-  mingw_app_type = 0;
+  __mingw_app_type = 0;
   if (dwReason == DLL_PROCESS_ATTACH)
     {
-      __security_init_cookie ();
-#ifdef _WIN64
+#if defined(__x86_64__) && !defined(__SEH__)
       __mingw_init_ehandler ();
 #endif
     }
@@ -216,3 +201,10 @@ i__leave:
   return retcode ;
 }
 #endif
+
+int __cdecl atexit (_PVFV func)
+{
+    return _register_onexit_function(&atexit_table, (_onexit_t)func);
+}
+
+char __mingw_module_is_dll = 1;

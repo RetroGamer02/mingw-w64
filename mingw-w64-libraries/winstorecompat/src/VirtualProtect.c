@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2013 mingw-w64 project
+    Copyright (c) 2013-2016 mingw-w64 project
 
     Contributing authors: Rafaël Carré
 
@@ -30,8 +30,21 @@
 
 BOOL WINAPI VirtualProtect(LPVOID lpAddress, SIZE_T dwSize, DWORD flNewProtect, PDWORD lpflOldProtect)
 {
+#if _WIN32_WINNT >= _WIN32_WINNT_WIN10
+    ULONG OldProtection;
+    BOOL res = VirtualProtectFromApp(lpAddress, dwSize, flNewProtect,
+                                     lpflOldProtect ? &OldProtection : NULL);
+    if (lpflOldProtect)
+        *lpflOldProtect = OldProtection;
+    return res;
+#else /* _WIN32_WINNT < _WIN32_WINNT_WIN10 */
     SetLastError(ERROR_ACCESS_DENIED);
     return FALSE;
+#endif /* _WIN32_WINNT < _WIN32_WINNT_WIN10 */
 }
 
-BOOL (WINAPI *__MINGW_IMP_SYMBOL(VirtualProtect))(LPVOID lpAddress, SIZE_T dwSize, DWORD flNewProtect, PDWORD lpflOldProtect) asm("__imp__VirtualProtect@16") = VirtualProtect;
+#ifdef _X86_
+BOOL (WINAPI *__MINGW_IMP_SYMBOL(VirtualProtect))(LPVOID lpAddress, SIZE_T dwSize, DWORD flNewProtect, PDWORD lpflOldProtect) __asm__("__imp__VirtualProtect@16") = VirtualProtect;
+#else
+BOOL (WINAPI *__MINGW_IMP_SYMBOL(VirtualProtect))(LPVOID lpAddress, SIZE_T dwSize, DWORD flNewProtect, PDWORD lpflOldProtect) __asm__("__imp_VirtualProtect") = VirtualProtect;
+#endif

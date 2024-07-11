@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2013 mingw-w64 project
+    Copyright (c) 2013-2016 mingw-w64 project
 
     Contributing authors: Jean-Baptiste Kempf
 
@@ -22,16 +22,36 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x602 /* LoadPackagedLibrary is Win8 APP Family */
+#endif
 
 #define LoadLibraryW __LoadLibraryW
-#include <windef.h>
-#include <winbase.h>
+#define LoadLibraryA __LoadLibraryA
+#include <windows.h>
 #undef LoadLibraryW
+#undef LoadLibraryA
 
 HMODULE WINAPI LoadLibraryW(LPCWSTR lpFileName)
 {
     return LoadPackagedLibrary(lpFileName, 0);
 }
 
-HMODULE (WINAPI *__MINGW_IMP_SYMBOL(LoadLibraryW))(LPCWSTR lpFileName) asm("__imp__LoadLibraryW@4") = LoadLibraryW;
+HMODULE WINAPI LoadLibraryA(LPCSTR lpFileName)
+{
+    int len = MultiByteToWideChar(GetACP(), 0, lpFileName, -1, NULL, 0);
+    if (len <= 0)
+        return NULL;
+
+    wchar_t *out = alloca(len);
+    MultiByteToWideChar(GetACP(), 0, lpFileName, -1, out, len);
+    return LoadLibraryW(out);
+}
+
+#ifdef _X86_
+HMODULE (WINAPI *__MINGW_IMP_SYMBOL(LoadLibraryW))(LPCWSTR lpFileName) __asm__("__imp__LoadLibraryW@4") = LoadLibraryW;
+HMODULE (WINAPI *__MINGW_IMP_SYMBOL(LoadLibraryA))(LPCSTR lpFileName) __asm__("__imp__LoadLibraryA@4") = LoadLibraryA;
+#else
+HMODULE (WINAPI *__MINGW_IMP_SYMBOL(LoadLibraryW))(LPCWSTR lpFileName) __asm__("__imp_LoadLibraryW") = LoadLibraryW;
+HMODULE (WINAPI *__MINGW_IMP_SYMBOL(LoadLibraryA))(LPCSTR lpFileName) __asm__("__imp_LoadLibraryA") = LoadLibraryA;
+#endif

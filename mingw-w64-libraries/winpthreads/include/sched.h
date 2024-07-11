@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2011-2013 mingw-w64 project
+   Copyright (c) 2011-2016  mingw-w64 project
 
    Permission is hereby granted, free of charge, to any person obtaining a
    copy of this software and associated documentation files (the "Software"),
@@ -49,14 +49,18 @@ struct sched_param {
 extern "C" {
 #endif
 
-#if defined DLL_EXPORT && !defined (WINPTHREAD_EXPORT_ALL_DEBUG)
-#ifdef IN_WINPTHREAD
-#define WINPTHREAD_SCHED_API __declspec(dllexport)
+#if defined(IN_WINPTHREAD)
+#  if defined(DLL_EXPORT) && !defined(WINPTHREAD_EXPORT_ALL_DEBUG)
+#    define WINPTHREAD_SCHED_API  __declspec(dllexport)  /* building the DLL  */
+#  else
+#    define WINPTHREAD_SCHED_API  /* building the static library  */
+#  endif
 #else
-#define WINPTHREAD_SCHED_API __declspec(dllimport)
-#endif
-#else
-#define WINPTHREAD_SCHED_API
+#  if defined(WINPTHREADS_USE_DLLIMPORT)
+#    define WINPTHREAD_SCHED_API  __declspec(dllimport)  /* user wants explicit `dllimport`  */
+#  else
+#    define WINPTHREAD_SCHED_API  /* the default; auto imported in case of DLL  */
+#  endif
 #endif
 
 int WINPTHREAD_SCHED_API sched_yield(void);

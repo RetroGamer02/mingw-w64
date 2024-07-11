@@ -46,6 +46,7 @@ extern "C" {
   extern const CLSID CLSID_StaticDib;
   extern const CLSID CID_CDfsVolume;
   extern const CLSID CLSID_DCOMAccessControl;
+  extern const CLSID CLSID_GlobalOptions;
   extern const CLSID CLSID_StdGlobalInterfaceTable;
   extern const CLSID CLSID_ComBinding;
   extern const CLSID CLSID_StdEvent;
@@ -89,6 +90,8 @@ extern "C" {
   extern const CLSID CLSID_Picture_EnhMetafile;
   extern const CLSID CLSID_Picture_Dib;
   extern const GUID GUID_TRISTATE;
+
+  extern const CLSID CLSID_ContextSwitcher;
 
 #ifdef __cplusplus
 }

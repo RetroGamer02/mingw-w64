@@ -21,6 +21,7 @@
 #ifndef __WIDL_WIDL_H
 #define __WIDL_WIDL_H
 
+#include "../tools.h"
 #include "widltypes.h"
 
 #include <time.h>
@@ -45,14 +46,14 @@ extern int do_regscript;
 extern int do_idfile;
 extern int do_dlldata;
 extern int old_names;
-extern int do_win32;
-extern int do_win64;
 extern int win32_packing;
 extern int win64_packing;
-extern int do_rt_extension;
+extern int winrt_mode;
+extern int use_abi_namespace;
 
 extern char *input_name;
 extern char *input_idl_name;
+extern char *acf_name;
 extern char *header_name;
 extern char *header_token;
 extern char *local_stubs_name;
@@ -81,6 +82,7 @@ enum stub_mode
     MODE_Oif  /* new-style fully interpreted stubs */
 };
 extern enum stub_mode get_stub_mode(void);
+extern int open_typelib( const char *name );
 
 extern void write_header(const statement_list_t *stmts);
 extern void write_id_data(const statement_list_t *stmts);
@@ -88,6 +90,7 @@ extern void write_proxies(const statement_list_t *stmts);
 extern void write_client(const statement_list_t *stmts);
 extern void write_server(const statement_list_t *stmts);
 extern void write_regscript(const statement_list_t *stmts);
+extern void write_typelib_regscript(const statement_list_t *stmts);
 extern void output_typelib_regscript( const typelib_t *typelib );
 extern void write_local_stubs(const statement_list_t *stmts);
 extern void write_dlldata(const statement_list_t *stmts);

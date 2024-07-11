@@ -21,12 +21,6 @@
 #ifndef __WIDL_PARSER_H
 #define __WIDL_PARSER_H
 
-typedef struct
-{
-  type_t *interface;
-  unsigned char old_pointer_default;
-} interface_info_t;
-
 int parser_parse(void);
 
 extern FILE *parser_in;
@@ -44,6 +38,9 @@ void pop_import(void);
 #define parse_only import_stack_ptr
 
 int is_type(const char *name);
+
+int do_warning(const char *toggle, warning_list_t *wnum);
+int is_warning_enabled(int warning);
 
 extern char *temp_name;
 

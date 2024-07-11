@@ -2,9 +2,8 @@
 #include <malloc.h>
 #include <errno.h>
 #include <msvcrt.h>
+#include <sec_api/wchar_s.h>
 
-int __cdecl _vcwprintf (const wchar_t *, va_list);
-int __cdecl _vcwprintf_s (const wchar_t *, va_list);
 static int __cdecl _int_vcwprintf_s (const wchar_t *, va_list);
 static int __cdecl _stub (const wchar_t *, va_list);
 

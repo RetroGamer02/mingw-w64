@@ -7,6 +7,7 @@
 #define _INC_COMUTIL
 
 #include <ole2.h>
+#include <stdio.h>
 
 #ifndef _COM_ASSERT
 #define _COM_ASSERT(x) ((void)0)
@@ -44,7 +45,7 @@ class _bstr_t;
 class _variant_t;
 
 namespace _com_util {
-  inline void CheckError(HRESULT hr) throw() {
+  inline void CheckError(HRESULT hr) {
     if(FAILED(hr)) { _com_issue_error(hr); }
   }
 }
@@ -1210,6 +1211,10 @@ extern _variant_t vtMissing;
 #endif
 
 #pragma pop_macro("new")
+
+/* We use _com_issue_error here, but we only provide its inline version in comdef.h,
+ * so we need to make sure that it's included as well. */
+#include <comdef.h>
 
 #endif /* __cplusplus */
 

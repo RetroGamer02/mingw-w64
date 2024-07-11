@@ -24,10 +24,12 @@
 extern "C" {
 #endif
 
+#ifndef WINNORMALIZEAPI
 #ifndef _NORMALIZE_
 # define WINNORMALIZEAPI DECLSPEC_IMPORT
 #else
 # define WINNORMALIZEAPI
+#endif
 #endif
 
 /* Country codes */
@@ -169,10 +171,12 @@ extern "C" {
 #define LOCALE_USE_CP_ACP             0x40000000
 #define LOCALE_RETURN_NUMBER          0x20000000
 #define LOCALE_RETURN_GENITIVE_NAMES  0x10000000
+#define LOCALE_ALLOW_NEUTRAL_NAMES    0x08000000
 
 /* Locale information types */
 #define LOCALE_ILANGUAGE            0x0001
 #define LOCALE_SLANGUAGE            0x0002
+#define LOCALE_SLOCALIZEDDISPLAYNAME 0x0002
 #define LOCALE_SENGLANGUAGE         0x1001
 #define LOCALE_SENGLISHLANGUAGENAME 0x1001
 #define LOCALE_SABBREVLANGNAME      0x0003
@@ -312,6 +316,9 @@ extern "C" {
 #define LOCALE_SSHORTTIME           0x0079
 #define LOCALE_SOPENTYPELANGUAGETAG 0X007A
 #define LOCALE_SSORTLOCALE          0x007B
+#define LOCALE_SRELATIVELONGDATE    0x007C
+#define LOCALE_SSHORTESTAM          0x007E
+#define LOCALE_SSHORTESTPM          0x007F
 
 #define LOCALE_IDEFAULTEBCDICCODEPAGE 0x1012
 #define LOCALE_IPAPERSIZE             0x100A
@@ -322,25 +329,19 @@ extern "C" {
 #define LOCALE_IDIGITSUBSTITUTION     0x1014
 
 /* Locale name special values */
-#if defined(__GNUC__)
-# define LOCALE_NAME_INVARIANT      (const WCHAR []){ 0 }
-#elif defined(_MSC_VER)
+#if defined(_MSC_VER) || defined(__MINGW32__)
 # define LOCALE_NAME_INVARIANT      L""
 #else
 static const WCHAR LOCALE_NAME_INVARIANT[] = { 0 };
 #endif
 
-#if defined(__GNUC__)
-# define LOCALE_NAME_SYSTEM_DEFAULT      (const WCHAR []){'!','s','y','s','-','d','e','f','a','u','l','t','-','l','o','c','a','l','e',0}
-#elif defined(_MSC_VER)
+#if defined(_MSC_VER) || defined(__MINGW32__)
 # define LOCALE_NAME_SYSTEM_DEFAULT      L"!sys-default-locale"
 #else
 static const WCHAR LOCALE_NAME_SYSTEM_DEFAULT[] = {'!','s','y','s','-','d','e','f','a','u','l','t','-','l','o','c','a','l','e',0};
 #endif
 
 #define LOCALE_NAME_USER_DEFAULT    NULL
-
-#define LOCALE_IDEFAULTUNIXCODEPAGE   0x1030 /* Wine extension */
 
 #define NORM_IGNORECASE            0x00000001
 #define NORM_IGNORENONSPACE        0x00000002
@@ -352,6 +353,10 @@ static const WCHAR LOCALE_NAME_SYSTEM_DEFAULT[] = {'!','s','y','s','-','d','e','
 #define NORM_IGNOREKANATYPE        0x00010000
 #define NORM_IGNOREWIDTH           0x00020000
 #define NORM_LINGUISTIC_CASING     0x08000000
+#define FIND_STARTSWITH            0x00100000
+#define FIND_ENDSWITH              0x00200000
+#define FIND_FROMSTART             0x00400000
+#define FIND_FROMEND               0x00800000
 
 #define CP_ACP        0
 #define CP_OEMCP      1
@@ -392,17 +397,18 @@ static const WCHAR LOCALE_NAME_SYSTEM_DEFAULT[] = {'!','s','y','s','-','d','e','
 /* String mapping flags */
 #define LCMAP_LOWERCASE  0x00000100	/* Make lower-case */
 #define LCMAP_UPPERCASE  0x00000200	/* Make upper-case */
+#define LCMAP_TITLECASE  0x00000300	/* Make title-case */
 #define LCMAP_SORTKEY    0x00000400	/* Create a sort key */
 #define LCMAP_BYTEREV    0x00000800	/* Reverse the result */
-
+#define LCMAP_HASH       0x00040000
 #define LCMAP_HIRAGANA   0x00100000	/* Transform Japanese katakana into hiragana */
 #define LCMAP_KATAKANA   0x00200000	/* Transform Japanese hiragana into katakana */
 #define LCMAP_HALFWIDTH  0x00400000	/* Use single byte chars in output */
 #define LCMAP_FULLWIDTH  0x00800000	/* Use double byte chars in output */
-
 #define LCMAP_LINGUISTIC_CASING   0x01000000 /* Change case by using language context */
 #define LCMAP_SIMPLIFIED_CHINESE  0x02000000 /* Transform Chinese traditional into simplified */
 #define LCMAP_TRADITIONAL_CHINESE 0x04000000 /* Transform Chinese simplified into traditional */
+#define LCMAP_SORTHANDLE 0x20000000
 
 /* Date and time formatting flags */
 #define DATE_SHORTDATE          0x01  /* Short date format */
@@ -411,6 +417,8 @@ static const WCHAR LOCALE_NAME_SYSTEM_DEFAULT[] = {'!','s','y','s','-','d','e','
 #define DATE_YEARMONTH          0x08  /* Year/month format */
 #define DATE_LTRREADING         0x10  /* Add LTR reading marks */
 #define DATE_RTLREADING         0x20  /* Add RTL reading marks */
+#define DATE_AUTOLAYOUT         0x40  /* Add LTR or RTL reading marks automatically */
+#define DATE_MONTHDAY           0x80  /* Month/day format */
 
 #define TIME_FORCE24HOURFORMAT  0x08  /* Always use 24 hour clock */
 #define TIME_NOTIMEMARKER       0x04  /* show no AM/PM */
@@ -460,6 +468,8 @@ static const WCHAR LOCALE_NAME_SYSTEM_DEFAULT[] = {'!','s','y','s','-','d','e','
 #define	C3_IDEOGRAPH		0x0100
 #define	C3_KASHIDA		0x0200
 #define	C3_LEXICAL		0x0400
+#define	C3_HIGHSURROGATE	0x0800
+#define	C3_LOWSURROGATE		0x1000
 #define	C3_ALPHA		0x8000
 #define	C3_NOTAPPLICABLE	0x0000
 
@@ -469,9 +479,10 @@ static const WCHAR LOCALE_NAME_SYSTEM_DEFAULT[] = {'!','s','y','s','-','d','e','
 #define MAX_DEFAULTCHAR   2
 
 /* Defines for calendar handling */
-#define CAL_NOUSEROVERRIDE     LOCALE_NOUSEROVERRIDE
-#define CAL_USE_CP_ACP         LOCALE_USE_CP_ACP
-#define CAL_RETURN_NUMBER      LOCALE_RETURN_NUMBER
+#define CAL_NOUSEROVERRIDE        LOCALE_NOUSEROVERRIDE
+#define CAL_USE_CP_ACP            LOCALE_USE_CP_ACP
+#define CAL_RETURN_NUMBER         LOCALE_RETURN_NUMBER
+#define CAL_RETURN_GENITIVE_NAMES LOCALE_RETURN_GENITIVE_NAMES
 
 #define CAL_ICALINTVALUE       0x01
 #define CAL_SCALNAME           0x02
@@ -521,6 +532,18 @@ static const WCHAR LOCALE_NAME_SYSTEM_DEFAULT[] = {'!','s','y','s','-','d','e','
 #define CAL_SABBREVMONTHNAME13 0x2e
 #define CAL_SYEARMONTH         0x2f
 #define CAL_ITWODIGITYEARMAX   0x30
+#define CAL_SSHORTESTDAYNAME1  0x31
+#define CAL_SSHORTESTDAYNAME2  0x32
+#define CAL_SSHORTESTDAYNAME3  0x33
+#define CAL_SSHORTESTDAYNAME4  0x34
+#define CAL_SSHORTESTDAYNAME5  0x35
+#define CAL_SSHORTESTDAYNAME6  0x36
+#define CAL_SSHORTESTDAYNAME7  0x37
+#define CAL_SMONTHDAY          0x38
+#define CAL_SABBREVERASTRING   0x39
+#define CAL_SRELATIVELONGDATE  0x3a
+#define CAL_SENGLISHERANAME    0x3b
+#define CAL_SENGLISHABBREVERANAME 0x3c
 
 /* Calendar types */
 #define CAL_GREGORIAN              1
@@ -535,6 +558,8 @@ static const WCHAR LOCALE_NAME_SYSTEM_DEFAULT[] = {'!','s','y','s','-','d','e','
 #define CAL_GREGORIAN_ARABIC       10
 #define CAL_GREGORIAN_XLIT_ENGLISH 11
 #define CAL_GREGORIAN_XLIT_FRENCH  12
+#define CAL_PERSIAN                22
+#define CAL_UMALQURA               23
 
 /* EnumCalendarInfo Flags */
 #define ENUM_ALL_CALENDARS 0xffffffff /* Enumerate all calendars within a locale */
@@ -571,6 +596,52 @@ static const WCHAR LOCALE_NAME_SYSTEM_DEFAULT[] = {'!','s','y','s','-','d','e','
 /* IDN defines. */
 #define IDN_ALLOW_UNASSIGNED        0x1
 #define IDN_USE_STD3_ASCII_RULES    0x2
+
+/* MUI defines. */
+#define MUI_LANGUAGE_ID                     0x04
+#define MUI_LANGUAGE_NAME                   0x08
+#define MUI_MERGE_SYSTEM_FALLBACK           0x10
+#define MUI_MERGE_USER_FALLBACK             0x20
+#define MUI_UI_FALLBACK                     MUI_MERGE_SYSTEM_FALLBACK | MUI_MERGE_USER_FALLBACK
+#define MUI_THREAD_LANGUAGES                0x40
+#define MUI_CONSOLE_FILTER                  0x100
+#define MUI_COMPLEX_SCRIPT_FILTER           0x200
+#define MUI_RESET_FILTERS                   0x001
+#define MUI_USER_PREFERRED_UI_LANGUAGES     0x10
+#define MUI_USE_INSTALLED_LANGUAGES         0x20
+#define MUI_USE_SEARCH_ALL_LANGUAGES        0x40
+#define MUI_LANG_NEUTRAL_PE_FILE            0x100
+#define MUI_NON_LANG_NEUTRAL_FILE           0x200
+#define MUI_MACHINE_LANGUAGE_SETTINGS       0x400
+#define MUI_FILETYPE_NOT_LANGUAGE_NEUTRAL   0x001
+#define MUI_FILETYPE_LANGUAGE_NEUTRAL_MAIN  0x002
+#define MUI_FILETYPE_LANGUAGE_NEUTRAL_MUI   0x004
+#define MUI_QUERY_TYPE                      0x001
+#define MUI_QUERY_CHECKSUM                  0x002
+#define MUI_QUERY_LANGUAGE_NAME             0x004
+#define MUI_QUERY_RESOURCE_TYPES            0x008
+#define MUI_FILEINFO_VERSION                0x001
+#define MUI_FULL_LANGUAGE                   0x01
+#define MUI_PARTIAL_LANGUAGE                0x02
+#define MUI_LIP_LANGUAGE                    0x04
+#define MUI_LANGUAGE_INSTALLED              0x20
+#define MUI_LANGUAGE_LICENSED               0x40
+
+typedef struct _FILEMUIINFO {
+    DWORD dwSize;
+    DWORD dwVersion;
+    DWORD dwFileType;
+    BYTE pChecksum[16];
+    BYTE pServiceChecksum[16];
+    DWORD dwLanguageNameOffset;
+    DWORD dwTypeIDMainSize;
+    DWORD dwTypeIDMainOffset;
+    DWORD dwTypeNameMainOffset;
+    DWORD dwTypeIDMUISize;
+    DWORD dwTypeIDMUIOffset;
+    DWORD dwTypeNameMUIOffset;
+    BYTE abBuffer[8];
+} FILEMUIINFO, *PFILEMUIINFO;
 
 /* Types
  */
@@ -673,6 +744,8 @@ typedef struct _nlsversioninfo {
     DWORD dwNLSVersionInfoSize;
     DWORD dwNLSVersion;
     DWORD dwDefinedVersion;
+    DWORD dwEffectiveId;
+    GUID  guidCustomVersion;
 } NLSVERSIONINFO, *LPNLSVERSIONINFO;
 
 typedef struct _nlsversioninfoex {
@@ -683,8 +756,14 @@ typedef struct _nlsversioninfoex {
     GUID  guidCustomVersion;
 } NLSVERSIONINFOEX, *LPNLSVERSIONINFOEX;
 
+enum SYSNLS_FUNCTION { COMPARE_STRING = 1 };
+typedef DWORD NLS_FUNCTION;
+
 /* Define a bunch of callback types */
 
+typedef BOOL    (CALLBACK *CALINFO_ENUMPROCEXEX)(LPWSTR,CALID,LPWSTR,LPARAM);
+typedef BOOL    (CALLBACK *DATEFMT_ENUMPROCEXEX)(LPWSTR,CALID,LPARAM);
+typedef BOOL    (CALLBACK *TIMEFMT_ENUMPROCEX)(LPWSTR,LPARAM);
 #if defined(STRICT)
 typedef BOOL    (CALLBACK *CALINFO_ENUMPROCA)(LPSTR);
 typedef BOOL    (CALLBACK *CALINFO_ENUMPROCW)(LPWSTR);
@@ -756,11 +835,19 @@ enum SYSGEOTYPE
     GEO_FRIENDLYNAME,
     GEO_OFFICIALNAME,
     GEO_TIMEZONES,
-    GEO_OFFICIALLANGUAGES
+    GEO_OFFICIALLANGUAGES,
+    GEO_ISO_UN_NUMBER,
+    GEO_PARENT,
+    GEO_DIALINGCODE,
+    GEO_CURRENCYCODE,
+    GEO_CURRENCYSYMBOL,
+    GEO_NAME,
+    GEO_ID
 };
 
 enum SYSGEOCLASS
 {
+    GEOCLASS_ALL = 0,
     GEOCLASS_REGION = 14,
     GEOCLASS_NATION = 16
 };
@@ -775,6 +862,7 @@ WINBASEAPI INT         WINAPI CompareStringA(LCID,DWORD,LPCSTR,INT,LPCSTR,INT);
 WINBASEAPI INT         WINAPI CompareStringW(LCID,DWORD,LPCWSTR,INT,LPCWSTR,INT);
 #define                       CompareString WINELIB_NAME_AW(CompareString)
 WINBASEAPI INT         WINAPI CompareStringEx(LPCWSTR,DWORD,LPCWSTR,INT,LPCWSTR,INT,LPNLSVERSIONINFO,LPVOID,LPARAM);
+WINBASEAPI INT         WINAPI CompareStringOrdinal(const WCHAR *,INT,const WCHAR *,INT,BOOL);
 WINBASEAPI LCID        WINAPI ConvertDefaultLocale(LCID);
 WINBASEAPI BOOL        WINAPI EnumCalendarInfoA(CALINFO_ENUMPROCA,LCID,CALID,CALTYPE);
 WINBASEAPI BOOL        WINAPI EnumCalendarInfoW(CALINFO_ENUMPROCW,LCID,CALID,CALTYPE);
@@ -782,12 +870,14 @@ WINBASEAPI BOOL        WINAPI EnumCalendarInfoW(CALINFO_ENUMPROCW,LCID,CALID,CAL
 WINBASEAPI BOOL        WINAPI EnumCalendarInfoExA(CALINFO_ENUMPROCEXA,LCID,CALID,CALTYPE);
 WINBASEAPI BOOL        WINAPI EnumCalendarInfoExW(CALINFO_ENUMPROCEXW,LCID,CALID,CALTYPE);
 #define                       EnumCalendarInfoEx WINELIB_NAME_AW(EnumCalendarInfoEx)
+WINBASEAPI BOOL        WINAPI EnumCalendarInfoExEx(CALINFO_ENUMPROCEXEX,LPCWSTR,CALID,LPCWSTR,CALTYPE,LPARAM);
 WINBASEAPI BOOL        WINAPI EnumDateFormatsA(DATEFMT_ENUMPROCA,LCID,DWORD);
 WINBASEAPI BOOL        WINAPI EnumDateFormatsW(DATEFMT_ENUMPROCW,LCID,DWORD);
 #define                       EnumDateFormats WINELIB_NAME_AW(EnumDateFormats)
 WINBASEAPI BOOL        WINAPI EnumDateFormatsExA(DATEFMT_ENUMPROCEXA,LCID,DWORD);
 WINBASEAPI BOOL        WINAPI EnumDateFormatsExW(DATEFMT_ENUMPROCEXW,LCID,DWORD);
 #define                       EnumDateFormatsEx WINELIB_NAME_AW(EnumDateFormatsEx)
+WINBASEAPI BOOL        WINAPI EnumDateFormatsExEx(DATEFMT_ENUMPROCEXEX,LPCWSTR,DWORD,LPARAM);
 WINBASEAPI BOOL        WINAPI EnumSystemCodePagesA(CODEPAGE_ENUMPROCA,DWORD);
 WINBASEAPI BOOL        WINAPI EnumSystemCodePagesW(CODEPAGE_ENUMPROCW,DWORD);
 #define                       EnumSystemCodePages WINELIB_NAME_AW(EnumSystemCodePages)
@@ -805,6 +895,7 @@ WINBASEAPI BOOL        WINAPI EnumLanguageGroupLocalesW(LANGGROUPLOCALE_ENUMPROC
 WINBASEAPI BOOL        WINAPI EnumTimeFormatsA(TIMEFMT_ENUMPROCA,LCID,DWORD);
 WINBASEAPI BOOL        WINAPI EnumTimeFormatsW(TIMEFMT_ENUMPROCW,LCID,DWORD);
 #define                       EnumTimeFormats WINELIB_NAME_AW(EnumTimeFormats)
+WINBASEAPI BOOL        WINAPI EnumTimeFormatsEx(TIMEFMT_ENUMPROCEX,LPCWSTR,DWORD,LPARAM);
 WINBASEAPI BOOL        WINAPI EnumUILanguagesA(UILANGUAGE_ENUMPROCA,DWORD,LONG_PTR);
 WINBASEAPI BOOL        WINAPI EnumUILanguagesW(UILANGUAGE_ENUMPROCW,DWORD,LONG_PTR);
 #define                       EnumUILanguages WINELIB_NAME_AW(EnumUILanguages)
@@ -817,36 +908,53 @@ WINBASEAPI BOOL        WINAPI GetCPInfoExA(UINT,DWORD,LPCPINFOEXA);
 WINBASEAPI BOOL        WINAPI GetCPInfoExW(UINT,DWORD,LPCPINFOEXW);
 #define                       GetCPInfoEx WINELIB_NAME_AW(GetCPInfoEx)
 WINBASEAPI INT         WINAPI GetCalendarInfoA(LCID,DWORD,DWORD,LPSTR,INT,LPDWORD);
+WINBASEAPI INT         WINAPI GetCalendarInfoEx(const WCHAR*,CALID,const WCHAR*,CALTYPE,WCHAR*,INT,DWORD*);
 WINBASEAPI INT         WINAPI GetCalendarInfoW(LCID,DWORD,DWORD,LPWSTR,INT,LPDWORD);
 #define                       GetCalendarInfo WINELIB_NAME_AW(GetCalendarInfo)
 WINBASEAPI INT         WINAPI GetCurrencyFormatA(LCID,DWORD,LPCSTR,const CURRENCYFMTA*,LPSTR,INT);
+WINBASEAPI INT         WINAPI GetCurrencyFormatEx(LPCWSTR,DWORD,LPCWSTR,const CURRENCYFMTW*,LPWSTR,int);
 WINBASEAPI INT         WINAPI GetCurrencyFormatW(LCID,DWORD,LPCWSTR,const CURRENCYFMTW*,LPWSTR,INT);
 #define                       GetCurrencyFormat WINELIB_NAME_AW(GetCurrencyFormat)
 WINBASEAPI INT         WINAPI GetDateFormatA(LCID,DWORD,const SYSTEMTIME*,LPCSTR,LPSTR,INT);
+WINBASEAPI INT         WINAPI GetDateFormatEx(LPCWSTR,DWORD,const SYSTEMTIME*,LPCWSTR,LPWSTR,INT,LPCWSTR);
 WINBASEAPI INT         WINAPI GetDateFormatW(LCID,DWORD,const SYSTEMTIME*,LPCWSTR,LPWSTR,INT);
 #define                       GetDateFormat WINELIB_NAME_AW(GetDateFormat)
+WINBASEAPI BOOL        WINAPI GetFileMUIInfo(DWORD,PCWSTR,PFILEMUIINFO,DWORD*);
+WINBASEAPI BOOL        WINAPI GetFileMUIPath(DWORD,PCWSTR,PWSTR,PULONG,PWSTR,PULONG,PULONGLONG);
 WINBASEAPI INT         WINAPI GetGeoInfoA(GEOID,GEOTYPE,LPSTR,INT,LANGID);
 WINBASEAPI INT         WINAPI GetGeoInfoW(GEOID,GEOTYPE,LPWSTR,INT,LANGID);
 #define                       GetGeoInfo WINELIB_NAME_AW(GetGeoInfo)
+WINBASEAPI INT         WINAPI GetGeoInfoEx(PWSTR,GEOTYPE,PWSTR,INT);
 WINBASEAPI INT         WINAPI GetLocaleInfoA(LCID,LCTYPE,LPSTR,INT);
 WINBASEAPI INT         WINAPI GetLocaleInfoW(LCID,LCTYPE,LPWSTR,INT);
 #define                       GetLocaleInfo WINELIB_NAME_AW(GetLocaleInfo)
+WINBASEAPI INT         WINAPI GetLocaleInfoEx(LPCWSTR,LCTYPE,LPWSTR,INT);
+WINBASEAPI BOOL        WINAPI GetNLSVersion(NLS_FUNCTION,LCID,NLSVERSIONINFO*);
+WINBASEAPI BOOL        WINAPI GetNLSVersionEx(NLS_FUNCTION,LPCWSTR,NLSVERSIONINFOEX*);
 WINBASEAPI INT         WINAPI GetNumberFormatA(LCID,DWORD,LPCSTR,const NUMBERFMTA*,LPSTR,INT);
 WINBASEAPI INT         WINAPI GetNumberFormatW(LCID,DWORD,LPCWSTR,const NUMBERFMTW*,LPWSTR,INT);
 #define                       GetNumberFormat WINELIB_NAME_AW(GetNumberFormat)
 WINBASEAPI UINT        WINAPI GetOEMCP(void);
+WINBASEAPI BOOL        WINAPI GetProcessPreferredUILanguages(DWORD,PULONG,PZZWSTR,PULONG);
 WINBASEAPI BOOL        WINAPI GetStringTypeA(LCID,DWORD,LPCSTR,INT,LPWORD);
 WINBASEAPI BOOL        WINAPI GetStringTypeW(DWORD,LPCWSTR,INT,LPWORD);
 WINBASEAPI BOOL        WINAPI GetStringTypeExA(LCID,DWORD,LPCSTR,INT,LPWORD);
 WINBASEAPI BOOL        WINAPI GetStringTypeExW(LCID,DWORD,LPCWSTR,INT,LPWORD);
 #define                       GetStringTypeEx WINELIB_NAME_AW(GetStringTypeEx)
 WINBASEAPI LANGID      WINAPI GetSystemDefaultLangID(void);
+WINBASEAPI INT         WINAPI GetSystemDefaultLocaleName(LPWSTR,int);
 WINBASEAPI LCID        WINAPI GetSystemDefaultLCID(void);
 WINBASEAPI LANGID      WINAPI GetSystemDefaultUILanguage(void);
+WINBASEAPI BOOL        WINAPI GetSystemPreferredUILanguages(DWORD,ULONG*,WCHAR*,ULONG*);
 WINBASEAPI LCID        WINAPI GetThreadLocale(void);
+WINBASEAPI BOOL        WINAPI GetThreadPreferredUILanguages(DWORD,ULONG*,WCHAR*,ULONG*);
+WINBASEAPI LANGID      WINAPI GetThreadUILanguage(void);
+WINBASEAPI BOOL        WINAPI GetUserPreferredUILanguages(DWORD,ULONG*,WCHAR*,ULONG*);
 WINBASEAPI INT         WINAPI GetTimeFormatA(LCID,DWORD,const SYSTEMTIME*,LPCSTR,LPSTR,INT);
+WINBASEAPI INT         WINAPI GetTimeFormatEx(LPCWSTR,DWORD,const SYSTEMTIME*,LPCWSTR,LPWSTR,INT);
 WINBASEAPI INT         WINAPI GetTimeFormatW(LCID,DWORD,const SYSTEMTIME*,LPCWSTR,LPWSTR,INT);
 #define                       GetTimeFormat WINELIB_NAME_AW(GetTimeFormat)
+WINBASEAPI INT         WINAPI GetUserDefaultGeoName(LPWSTR,int);
 WINBASEAPI LANGID      WINAPI GetUserDefaultLangID(void);
 WINBASEAPI LCID        WINAPI GetUserDefaultLCID(void);
 WINBASEAPI INT         WINAPI GetUserDefaultLocaleName(LPWSTR,int);
@@ -857,10 +965,13 @@ WINNORMALIZEAPI INT    WINAPI IdnToNameprepUnicode(DWORD,LPCWSTR,INT,LPWSTR,INT)
 WINNORMALIZEAPI INT    WINAPI IdnToUnicode(DWORD,LPCWSTR,INT,LPWSTR,INT);
 WINBASEAPI BOOL        WINAPI IsDBCSLeadByte(BYTE);
 WINBASEAPI BOOL        WINAPI IsDBCSLeadByteEx(UINT,BYTE);
+WINBASEAPI BOOL        WINAPI IsNLSDefinedString(NLS_FUNCTION,DWORD,NLSVERSIONINFO*,LPCWSTR,INT);
 WINNORMALIZEAPI BOOL   WINAPI IsNormalizedString(NORM_FORM,LPCWSTR,INT);
 WINBASEAPI BOOL        WINAPI IsValidCodePage(UINT);
-WINBASEAPI BOOL        WINAPI IsValidLocale(LCID,DWORD);
 WINBASEAPI BOOL        WINAPI IsValidLanguageGroup(LGRPID,DWORD);
+WINBASEAPI BOOL        WINAPI IsValidLocale(LCID,DWORD);
+WINBASEAPI BOOL        WINAPI IsValidLocaleName(LPCWSTR);
+WINBASEAPI DWORD       WINAPI IsValidNLSVersion(NLS_FUNCTION,LPCWSTR,NLSVERSIONINFOEX*);
 WINBASEAPI INT         WINAPI LCIDToLocaleName(LCID,LPWSTR,INT,DWORD);
 WINBASEAPI INT         WINAPI LCMapStringA(LCID,DWORD,LPCSTR,INT,LPSTR,INT);
 WINBASEAPI INT         WINAPI LCMapStringW(LCID,DWORD,LPCWSTR,INT,LPWSTR,INT);
@@ -869,15 +980,21 @@ WINBASEAPI INT         WINAPI LCMapStringEx(LPCWSTR,DWORD,LPCWSTR,INT,LPWSTR,INT
 WINBASEAPI LCID        WINAPI LocaleNameToLCID(LPCWSTR,DWORD);
 WINBASEAPI INT         WINAPI MultiByteToWideChar(UINT,DWORD,LPCSTR,INT,LPWSTR,INT);
 WINNORMALIZEAPI INT    WINAPI NormalizeString(NORM_FORM,LPCWSTR,INT,LPWSTR,INT);
+WINBASEAPI INT         WINAPI ResolveLocaleName(LPCWSTR,LPWSTR,INT);
 WINBASEAPI INT         WINAPI SetCalendarInfoA(LCID,CALID,CALTYPE,LPCSTR);
 WINBASEAPI INT         WINAPI SetCalendarInfoW(LCID,CALID,CALTYPE,LPCWSTR);
 #define                       SetCalendarInfo WINELIB_NAME_AW(SetCalendarInfo)
 WINBASEAPI BOOL        WINAPI SetLocaleInfoA(LCID,LCTYPE,LPCSTR);
 WINBASEAPI BOOL        WINAPI SetLocaleInfoW(LCID,LCTYPE,LPCWSTR);
 #define                       SetLocaleInfo WINELIB_NAME_AW(SetLocaleInfo)
+WINBASEAPI BOOL        WINAPI SetProcessPreferredUILanguages(DWORD,PCZZWSTR,PULONG);
 WINBASEAPI BOOL        WINAPI SetThreadLocale(LCID);
+WINBASEAPI BOOL        WINAPI SetThreadPreferredUILanguages(DWORD,PCZZWSTR,PULONG);
+WINBASEAPI LANGID      WINAPI SetThreadUILanguage(LANGID);
 WINBASEAPI BOOL        WINAPI SetUserGeoID(GEOID);
+WINBASEAPI BOOL        WINAPI SetUserGeoName(PWSTR);
 WINBASEAPI INT         WINAPI WideCharToMultiByte(UINT,DWORD,LPCWSTR,INT,LPSTR,INT,LPCSTR,LPBOOL);
+WINBASEAPI INT         WINAPI FindNLSStringEx(const WCHAR *,DWORD,const WCHAR *,INT,const WCHAR *,INT,INT *,NLSVERSIONINFO *,void *,LPARAM);
 
 #ifdef __cplusplus
 }

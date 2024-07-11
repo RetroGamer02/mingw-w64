@@ -2,9 +2,8 @@
 #include <malloc.h>
 #include <errno.h>
 #include <msvcrt.h>
+#include <sec_api/wchar_s.h>
 
-int __cdecl _waccess (const wchar_t *e, int);
-errno_t __cdecl _waccess_s (const wchar_t *, int);
 static errno_t __cdecl _int_waccess_s (const wchar_t *, int);
 static errno_t __cdecl _stub (const wchar_t *, int);
 

@@ -3,65 +3,47 @@
  * This file is part of the mingw-w64 runtime package.
  * No warranty is given; refer to the file DISCLAIMER.PD within this package.
  */
-#include <windows.h>
-#include <stdio.h>
+
+#include <assert.h>
 #include <stdlib.h>
-#include <wchar.h>
-#include <signal.h>
+#include <windows.h>
+#include "msvcrt.h"
 
-extern int mingw_app_type;
-
-void __cdecl _wassert (const wchar_t *, const wchar_t *,unsigned);
-void __cdecl _assert (const char *, const char *, unsigned);
-
-void __cdecl
-_assert (const char *_Message, const char *_File, unsigned _Line)
+/* _wassert is not available on XP, so forward it to _assert if needed */
+static void __cdecl mingw_wassert(const wchar_t *_Message, const wchar_t *_File, unsigned _Line)
 {
-  wchar_t *m, *f;
-  int i;
-  m = (wchar_t *) malloc ((strlen (_Message) + 1) * sizeof (wchar_t));
-  f = (wchar_t *) malloc ((strlen (_File) + 1) * sizeof (wchar_t));
-  for (i = 0; _Message[i] != 0; i++)
-    m[i] = ((wchar_t) _Message[i]) & 0xff;
-  m[i] = 0;
-  for (i = 0; _File[i] != 0; i++)
-    f[i] = ((wchar_t) _File[i]) & 0xff;
-  f[i] = 0;
-  _wassert (m, f, _Line);
-  free (m);
-  free (f);
+    char *message = NULL, *file = NULL;
+    size_t len;
+
+    if ((len = wcstombs(NULL, _Message, 0)) != (size_t)-1)
+    {
+        message = malloc(len + 1);
+        wcstombs(message, _Message, len + 1);
+    }
+
+    if ((len = wcstombs(NULL, _File, 0)) != (size_t)-1)
+    {
+        file = malloc(len + 1);
+        wcstombs(file, _File, len + 1);
+    }
+
+    _assert(message, file, _Line);
+
+    free(message);
+    free(file);
 }
 
-void __cdecl
-_wassert (const wchar_t *_Message, const wchar_t *_File, unsigned _Line)
-{
-  wchar_t *msgbuf = (wchar_t *) malloc (8192*sizeof(wchar_t));
-  wchar_t fn[MAX_PATH + 1];
-  DWORD nCode;
+static void __cdecl init_wassert(const wchar_t *message, const wchar_t *file, unsigned line);
 
-  if (!_File || _File[0] == 0)
-    _File = L"<unknown>";
-  if (!_Message || _Message[0] == 0)
-    _Message = L"?";
-  if (! GetModuleFileNameW (NULL, fn, MAX_PATH))
-    wcscpy (fn, L"<unknown>");
-  _snwprintf (msgbuf, 8191, L"Assertion failed!\n\nProgram: %ws\n"
-		  "File: %ws, Line %u\n\nExpression: %ws",
-		  fn, _File,_Line, _Message);
-  if (mingw_app_type == 0)
-    {
-      fwprintf (stderr, L"%ws\n", msgbuf);
-      abort ();
-    }
-  nCode = MessageBoxW (NULL, msgbuf, L"MinGW Runtime Assertion", MB_ABORTRETRYIGNORE|
-    MB_ICONHAND|MB_SETFOREGROUND|MB_TASKMODAL);
-  if (nCode == IDABORT)
-    {
-      raise (SIGABRT);
-      _exit (3);
-      abort ();
-    }
-  if (nCode == IDIGNORE)
-    return;
-  abort ();
+void (__cdecl *__MINGW_IMP_SYMBOL(_wassert))(const wchar_t*, const wchar_t*,unsigned) = init_wassert;
+
+static void __cdecl init_wassert(const wchar_t *message, const wchar_t *file, unsigned line)
+{
+    void *func;
+
+    func = (void*)GetProcAddress(__mingw_get_msvcrt_handle(), "_wassert");
+    if(!func)
+        func = mingw_wassert;
+
+    return (__MINGW_IMP_SYMBOL(_wassert) = func)(message, file, line);
 }

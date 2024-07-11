@@ -13,16 +13,6 @@
 #include <signal.h>
 #include <stdio.h>
 
-#if defined (_WIN64) && defined (__ia64__)
-#error FIXME: Unsupported __ImageBase implementation.
-#else
-#ifndef _MSC_VER
-#define __ImageBase __MINGW_LSYMBOL(_image_base__)
-#endif
-/* This symbol is defined by the linker.  */
-extern IMAGE_DOS_HEADER __ImageBase;
-#endif
-
 #pragma pack(push,1)
 typedef struct _UNWIND_INFO {
   BYTE VersionAndFlags;
@@ -40,7 +30,7 @@ PBYTE _GetPEImageBase (void);
 int __mingw_init_ehandler (void);
 extern void _fpreset (void);
 
-#if defined(_WIN64) && !defined(_MSC_VER)
+#if defined(__x86_64__) && !defined(_MSC_VER) && !defined(__SEH__)
 EXCEPTION_DISPOSITION __mingw_SEH_error_handler(struct _EXCEPTION_RECORD *, void *, struct _CONTEXT *, void *);
 
 #define MAX_PDATA_ENTRIES 32

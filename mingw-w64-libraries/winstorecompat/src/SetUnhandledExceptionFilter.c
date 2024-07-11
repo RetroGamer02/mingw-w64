@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2013 mingw-w64 project
+    Copyright (c) 2013-2016 mingw-w64 project
 
     Contributing authors: Jean-Baptiste Kempf
 
@@ -36,7 +36,11 @@ LPTOP_LEVEL_EXCEPTION_FILTER WINAPI SetUnhandledExceptionFilter(LPTOP_LEVEL_EXCE
         LPTOP_LEVEL_EXCEPTION_FILTER prev_filter;
     } u;
     PVOID *target = &u.target;
-    return (LPTOP_LEVEL_EXCEPTION_FILTER)(INT_PTR)InterlockedExchangePointer(target, lpTopLevelExceptionFilter);
+    return (LPTOP_LEVEL_EXCEPTION_FILTER)(INT_PTR)InterlockedExchangePointer(target, (PVOID)lpTopLevelExceptionFilter);
 }
 
-LPTOP_LEVEL_EXCEPTION_FILTER (WINAPI *__MINGW_IMP_SYMBOL(SetUnhandledExceptionFilter))(LPTOP_LEVEL_EXCEPTION_FILTER) asm("__imp__SetUnhandledExceptionFilter@4") = SetUnhandledExceptionFilter;
+#ifdef _X86_
+LPTOP_LEVEL_EXCEPTION_FILTER (WINAPI *__MINGW_IMP_SYMBOL(SetUnhandledExceptionFilter))(LPTOP_LEVEL_EXCEPTION_FILTER) __asm__("__imp__SetUnhandledExceptionFilter@4") = SetUnhandledExceptionFilter;
+#else
+LPTOP_LEVEL_EXCEPTION_FILTER (WINAPI *__MINGW_IMP_SYMBOL(SetUnhandledExceptionFilter))(LPTOP_LEVEL_EXCEPTION_FILTER) __asm__("__imp_SetUnhandledExceptionFilter") = SetUnhandledExceptionFilter;
+#endif

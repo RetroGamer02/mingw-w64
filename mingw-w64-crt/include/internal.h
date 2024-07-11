@@ -18,19 +18,6 @@ extern "C" {
 
 #pragma pack(push,_CRT_PACKING)
 
-#ifndef __INTERNAL_FUNC_DEFINED
-#define __INTERNAL_FUNC_DEFINED
-  typedef void (__cdecl *_PVFV)(void);
-  typedef int (__cdecl *_PIFV)(void);
-  typedef void (__cdecl *_PVFI)(int);
-#endif
-
-#if defined (SPECIAL_CRTEXE) && (defined (_DLL) || defined (__GNUC__))
-  extern int _commode;
-#else
-  _CRTIMP extern int _commode;
-#endif
-
 #define __IOINFO_TM_ANSI 0
 #define __IOINFO_TM_UTF8 1
 #define __IOINFO_TM_UTF16LE 2
@@ -114,21 +101,9 @@ extern wchar_t *** __MINGW_IMP_SYMBOL(__winitenv);
 #define __winitenv (* __MINGW_IMP_SYMBOL(__winitenv))
 #endif
 
-#ifndef __initenv
+#if !defined(__initenv)
 extern char *** __MINGW_IMP_SYMBOL(__initenv);
 #define __initenv (* __MINGW_IMP_SYMBOL(__initenv))
-#endif
-
-#ifndef _acmdln
-extern char ** __MINGW_IMP_SYMBOL(_acmdln);
-#define _acmdln (* __MINGW_IMP_SYMBOL(_acmdln))
-/*  _CRTIMP extern char *_acmdln; */
-#endif
-
-#ifndef _wcmdln
-extern char ** __MINGW_IMP_SYMBOL(_wcmdln);
-#define _wcmdln (* __MINGW_IMP_SYMBOL(_wcmdln))
-/*  __CRTIMP extern wchar_t *_wcmdln; */
 #endif
 
   _CRTIMP void __cdecl _amsg_exit(int);
@@ -170,10 +145,6 @@ extern char ** __MINGW_IMP_SYMBOL(_wcmdln);
 
 #include <crtdbg.h>
 #include <errno.h>
-
-  void * __cdecl _encode_pointer(void *);
-  void * __cdecl _encoded_null();
-  void * __cdecl _decode_pointer(void *);
 
   BOOL __cdecl _ValidateImageBase (PBYTE pImageBase);
   PIMAGE_SECTION_HEADER __cdecl _FindPESection (PBYTE pImageBase, DWORD_PTR rva);

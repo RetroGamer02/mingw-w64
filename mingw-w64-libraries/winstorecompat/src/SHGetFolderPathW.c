@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2013 mingw-w64 project
+    Copyright (c) 2013-2016 mingw-w64 project
 
     Contributing authors: Rafaël Carré
 
@@ -34,4 +34,8 @@ HRESULT WINAPI SHGetFolderPathW(HWND hwnd,int csidl,HANDLE hToken,DWORD dwFlags,
     return S_FALSE;
 }
 
-HRESULT (WINAPI *__MINGW_IMP_SYMBOL(SHGetFolderPathW))(HWND hwnd,int csidl,HANDLE hToken,DWORD dwFlags,LPWSTR pszPath) asm("__imp__SHGetFolderPathW@20") = SHGetFolderPathW;
+#ifdef _X86_
+HRESULT (WINAPI *__MINGW_IMP_SYMBOL(SHGetFolderPathW))(HWND hwnd,int csidl,HANDLE hToken,DWORD dwFlags,LPWSTR pszPath) __asm__("__imp__SHGetFolderPathW@20") = SHGetFolderPathW;
+#else
+HRESULT (WINAPI *__MINGW_IMP_SYMBOL(SHGetFolderPathW))(HWND hwnd,int csidl,HANDLE hToken,DWORD dwFlags,LPWSTR pszPath) __asm__("__imp_SHGetFolderPathW") = SHGetFolderPathW;
+#endif

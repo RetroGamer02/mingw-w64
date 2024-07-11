@@ -822,7 +822,9 @@ _atof_l
 _atoflt
 _atoflt_l
 _atoi64
+atoll == _atoi64
 _atoi64_l
+_atoll_l == _atoi64_l
 _atoi_l
 _atol_l
 _atoldbl
@@ -889,6 +891,7 @@ _cwscanf
 _cwscanf_l
 _cwscanf_s
 _cwscanf_s_l
+_daylight DATA
 _difftime32
 _difftime64
 _dosmaperr
@@ -978,6 +981,7 @@ _ftime32
 _ftime32_s
 _ftime64
 _ftime64_s
+_ftime == _ftime64
 _fullpath
 _futime32
 _futime64
@@ -1453,6 +1457,7 @@ _stricmp_l
 _stricoll
 _stricoll_l
 _strlwr
+strlwr == _strlwr
 _strlwr_l
 _strlwr_s
 _strlwr_s_l
@@ -1471,10 +1476,18 @@ _strtime
 _strtime_s
 _strtod_l
 _strtoi64
+strtoll == _strtoi64
+strtoimax == _strtoi64
 _strtoi64_l
+_strtoll_l == _strtoi64_l
+_strtoimax_l == _strtoi64_l
 _strtol_l
 _strtoui64
+strtoull == _strtoui64
+strtoumax == _strtoui64
 _strtoui64_l
+_strtoull_l == _strtoui64_l
+_strtoumax_l == _strtoui64_l
 _strtoul_l
 _strupr
 _strupr_l
@@ -1498,12 +1511,14 @@ _tempnam
 _time32
 _time64
 time == _time64
+_timezone DATA
 _tolower
 _tolower_l
 _toupper
 _toupper_l
 _towlower_l
 _towupper_l
+_tzname DATA
 _tzset
 _ui64toa
 _ui64toa_s
@@ -1560,7 +1575,6 @@ _vscwprintf_l
 _vscwprintf_p
 _vscwprintf_p_l
 _vsnprintf
-vsnprintf == _vsnprintf
 _vsnprintf_c
 _vsnprintf_c_l
 _vsnprintf_l
@@ -1605,6 +1619,7 @@ _wcsicmp_l
 _wcsicoll
 _wcsicoll_l
 _wcslwr
+wcslwr == _wcslwr
 _wcslwr_l
 _wcslwr_s
 _wcslwr_s_l
@@ -1786,6 +1801,7 @@ fmodf
 fopen
 fopen_s
 fprintf
+__ms_fprintf == fprintf
 fprintf_s
 fputc
 fputs
@@ -1796,16 +1812,19 @@ fread_s
 free
 freopen
 freopen_s
-frexp
+frexp DATA
 fscanf
+__ms_fscanf == fscanf
 fscanf_s
 fseek
 fsetpos
 ftell
 fwprintf
+__ms_fwprintf == fwprintf
 fwprintf_s
 fwrite
 fwscanf
+__ms_fwscanf == fwscanf
 fwscanf_s
 getc
 getchar
@@ -1845,12 +1864,15 @@ labs
 ldexp
 ldiv
 llabs
+imaxabs == llabs
 lldiv
+imaxdiv == lldiv
 localeconv
 log
 log10
 log10f
 logf
+longjmp
 malloc
 mblen
 mbrlen
@@ -1873,6 +1895,7 @@ perror
 pow
 powf
 printf
+__ms_printf == printf
 printf_s
 putc
 putchar
@@ -1889,6 +1912,7 @@ remove
 rename
 rewind
 scanf
+__ms_scanf == scanf
 scanf_s
 setbuf
 setjmp
@@ -1900,11 +1924,13 @@ sinf
 sinh
 sinhf
 sprintf
+__ms_sprintf == sprintf
 sprintf_s
 sqrt
 sqrtf
 srand
 sscanf
+__ms_sscanf == sscanf
 sscanf_s
 strcat
 strcat_s
@@ -1936,6 +1962,7 @@ strtoul
 strxfrm
 swprintf_s
 swscanf
+__ms_swscanf == swscanf
 swscanf_s
 system
 tan
@@ -1953,15 +1980,20 @@ towupper
 ungetc
 ungetwc
 vfprintf
+__ms_vfprintf == vfprintf
 vfprintf_s
 vfwprintf
+__ms_vfwprintf == vfwprintf
 vfwprintf_s
 vprintf
+__ms_vprintf == vprintf
 vprintf_s
 vsprintf
+__ms_vsprintf == vsprintf
 vsprintf_s
 vswprintf_s
 vwprintf
+__ms_vwprintf == vwprintf
 vwprintf_s
 wcrtomb
 wcrtomb_s
@@ -2001,6 +2033,8 @@ wctomb_s
 wmemcpy_s
 wmemmove_s
 wprintf
+__ms_wprintf == wprintf
 wprintf_s
 wscanf
+__ms_wscanf == wscanf
 wscanf_s

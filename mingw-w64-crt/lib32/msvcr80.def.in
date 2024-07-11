@@ -1,3 +1,4 @@
+LIBRARY "msvcr80.dll"
 EXPORTS
 
 #include "msvcrt-common.def.in"
@@ -18,7 +19,7 @@ _CIsinh
 _CIsqrt
 _CItan
 _CItanh
-_CxxThrowException
+_CxxThrowException@8
 _EH_prolog
 _Getdays
 _Getmonths
@@ -110,9 +111,10 @@ _adj_fptan
 _adjust_fdiv DATA
 _aexit_rtn DATA
 _amsg_exit
-_assert DATA
+_assert
 _atodbl
 _atoi64
+atoll == _atoi64
 _atoldbl
 _beep
 _beginthread
@@ -140,6 +142,9 @@ _creat
 _cscanf
 _ctype DATA
 _cwait
+_daylight DATA
+_difftime32
+_difftime64
 _dstbias DATA
 _dup
 _dup2
@@ -274,6 +279,7 @@ _lfind
 _loaddll
 _local_unwind2
 _lock
+_lock_file
 _locking
 _logb
 _longjmpex
@@ -348,7 +354,7 @@ _mkdir
 _mktemp
 _msize
 _nextafter
-_onexit DATA
+_onexit
 _open
 _open_osfhandle
 _osver DATA
@@ -379,6 +385,7 @@ _scalb
 _searchenv
 _seh_longjmp_unwind
 _set_error_mode
+_set_invalid_parameter_handler
 _set_sbh_threshold
 _seterrormode
 _setjmp
@@ -414,6 +421,7 @@ _strerror
 _stricmp
 _stricoll
 _strlwr
+strlwr == _strlwr
 _strncoll
 _strnicmp
 _strnicoll
@@ -428,8 +436,10 @@ _sys_nerr DATA
 _tell
 _telli64
 _tempnam
+_timezone DATA
 _tolower
 _toupper
+_tzname DATA
 _tzset
 _ui64toa
 _ui64tow
@@ -440,9 +450,9 @@ _ungetch
 _unlink
 _unloaddll
 _unlock
+_unlock_file
 _utime
 _vsnprintf
-vsnprintf == _vsnprintf
 _vsnwprintf
 _waccess
 _wasctime
@@ -454,6 +464,7 @@ _wcsdup
 _wcsicmp
 _wcsicoll
 _wcslwr
+wcslwr == _wcslwr
 _wcsncoll
 _wcsnicmp
 _wcsnicoll
@@ -534,6 +545,30 @@ _wutime
 _y0
 _y1
 _yn
+_fclose_nolock
+_fflush_nolock
+_fgetwc_nolock
+_getwc_nolock == _fgetwc_nolock
+_fputwc_nolock
+_fread_nolock
+_fread_nolock_s
+_fseek_nolock
+_fseeki64_nolock
+_ftell_nolock
+_ftelli64_nolock
+_fwrite_nolock
+_getch_nolock
+_getche_nolock
+_getdcwd_nolock
+_getwch_nolock
+_getwche_nolock
+_putch_nolock
+_putwch_nolock
+_ungetc_nolock
+_ungetch_nolock
+_ungetwc_nolock
+_ungetwch_nolock
+_wgetdcwd_nolock
 abort
 abs
 acos
@@ -573,6 +608,7 @@ floor DATA
 fmod DATA
 fopen
 fprintf
+__ms_fprintf == fprintf
 fputc
 fputs
 fputwc
@@ -580,15 +616,17 @@ fputws
 fread
 free
 freopen
-; If we implement frexp, we can set it to DATA only.
-frexp
+frexp DATA
 fscanf
+__ms_fscanf == fscanf
 fseek
 fsetpos
 ftell
 fwprintf
+__ms_fwprintf == fwprintf
 fwrite
 fwscanf
+__ms_fwscanf == fwscanf
 getc
 getchar
 getenv
@@ -632,6 +670,7 @@ _localtime32
 log DATA
 ; If we implement log10, we can set it to DATA only.
 log10
+longjmp
 malloc
 mblen
 mbstowcs
@@ -647,6 +686,7 @@ modf DATA
 perror
 pow DATA
 printf
+__ms_printf == printf
 putc
 putchar
 puts
@@ -662,6 +702,7 @@ remove
 rename
 rewind
 scanf
+__ms_scanf == scanf
 setbuf
 setlocale
 setvbuf
@@ -670,9 +711,11 @@ sin DATA
 ; If we impelement sinh, we can set it to DATA only.
 sinh
 sprintf
+__ms_sprintf == sprintf
 sqrt DATA
 srand
 sscanf
+__ms_sscanf == sscanf
 strcat
 strchr
 strcmp
@@ -695,7 +738,9 @@ strtol
 strtoul
 strxfrm
 swprintf
+__ms_swprintf == swprintf
 swscanf
+__ms_swscanf == swscanf
 system
 tan
 ; If we implement tanh, we can set it to DATA only.
@@ -711,11 +756,17 @@ towupper
 ungetc
 ungetwc
 vfprintf
+__ms_vfprintf == vfprintf
 vfwprintf
+__ms_vfwprintf == vfwprintf
 vprintf
+__ms_vprintf == vprintf
 vsprintf
+__ms_vsprintf == vsprintf
 vswprintf
+__ms_vswprintf == vswprintf
 vwprintf
+__ms_vwprintf == vwprintf
 wcscat
 wcschr
 wcscmp
@@ -739,7 +790,9 @@ wcstoul
 wcsxfrm
 wctomb
 wprintf
+__ms_wprintf == wprintf
 wscanf
+__ms_wscanf == wscanf
 ; msvcrt.dll(version 6.10) and later
 __lc_collate_cp	DATA
 __p__mbcasemap
@@ -794,10 +847,15 @@ _set_security_error_handler
 _snscanf
 _snwscanf
 _strtoi64
+strtoll == _strtoi64
+strtoimax == _strtoi64
 _strtoui64
+strtoull == _strtoui64
+strtoumax == _strtoui64
 _ungetwch
 _vscprintf
 _vscwprintf
+_wassert
 _wcserror
 _wcstoi64
 _wcstoui64

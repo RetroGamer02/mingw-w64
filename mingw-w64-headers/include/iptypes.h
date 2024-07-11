@@ -6,6 +6,9 @@
 #ifndef IP_TYPES_INCLUDED
 #define IP_TYPES_INCLUDED
 
+#include <winapifamily.h>
+#if WINAPI_FAMILY_PARTITION (WINAPI_PARTITION_DESKTOP) || _WIN32_WINNT >= 0x0A00
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -57,8 +60,13 @@ extern "C" {
     WINBOOL HaveWins;
     IP_ADDR_STRING PrimaryWinsServer;
     IP_ADDR_STRING SecondaryWinsServer;
-    time_t LeaseObtained;
-    time_t LeaseExpires;
+#ifdef _WIN64
+    __time64_t LeaseObtained;
+    __time64_t LeaseExpires;
+#else
+    __time32_t LeaseObtained;
+    __time32_t LeaseExpires;
+#endif
   } IP_ADAPTER_INFO,*PIP_ADAPTER_INFO;
 
 #ifdef _WINSOCK2API_
@@ -368,6 +376,8 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* #if WINAPI_FAMILY_PARTITION (WINAPI_PARTITION_DESKTOP) || _WIN32_WINNT >= 0x0A00 */
 
 #endif /* IP_TYPES_INCLUDED */
 

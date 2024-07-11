@@ -4,12 +4,13 @@
  * No warranty is given; refer to the file DISCLAIMER.PD within this package.
  */
 
+#include <crtdefs.h>
 #include <sect_attribs.h>
-#include <internal.h>
+#include <corecrt_startup.h>
 
 __declspec(dllimport) int __lconv_init (void);
 
-int mingw_initcharmax = 0;
+int __mingw_initcharmax = 0;
 
 int _charmax = 255;
 

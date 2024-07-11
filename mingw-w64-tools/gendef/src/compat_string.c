@@ -1,6 +1,6 @@
 /*
     gendef - Generate list of exported symbols from a Portable Executable.
-    Copyright (C) 2009, 2010, 2011, 2012, 2013  mingw-w64 project
+    Copyright (C) 2009-2016  mingw-w64 project
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -15,17 +15,18 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 #ifdef CONFIG_H
 #include <config.h>
 #endif
 
-#ifndef HAVE_STRLWER
+#ifndef HAVE_STRLWR
 
 #include <ctype.h>
 #include "compat_string.h"
 
 char *strlwr(char *s) {
-	while(*s != '\x0') {
+	while (*s != '\0') {
 		*s = tolower(*s);
 		s++;
 	}
@@ -33,4 +34,4 @@ char *strlwr(char *s) {
 	return s;
 }
 
-#endif /* HAVE_STRLWER */
+#endif /* HAVE_STRLWR */

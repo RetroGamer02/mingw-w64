@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2011 mingw-w64 project
+   Copyright (c) 2011-2016  mingw-w64 project
 
    Permission is hereby granted, free of charge, to any person obtaining a
    copy of this software and associated documentation files (the "Software"),
@@ -29,6 +29,7 @@
 
 #define LIFE_THREAD 0xBAB1F00D
 #define DEAD_THREAD 0xDEADBEEF
+#define EXCEPTION_SET_THREAD_NAME ((DWORD) 0x406D1388)
 
 typedef struct _pthread_v _pthread_v;
 struct _pthread_v
@@ -48,6 +49,7 @@ struct _pthread_v
     unsigned int keymax;
     void **keyval;
     unsigned char *keyval_set;
+    char *thread_name;
     pthread_spinlock_t spin_keys;
     DWORD tid;
     int rwlc;

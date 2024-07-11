@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2013 mingw-w64 project
+    Copyright (c) 2013-2016 mingw-w64 project
 
     Contributing authors: Jean-Baptiste Kempf
 
@@ -22,7 +22,9 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x600 /* GetFileInformationByHandleEx is Vista+ */
+#endif
 
 #define GetFileSize __GetFileSize
 #include <windef.h>
@@ -48,4 +50,8 @@ DWORD WINAPI GetFileSize(HANDLE hFile, LPDWORD lpFileSizeHigh)
     return dwRet;
 }
 
-DWORD (WINAPI *__MINGW_IMP_SYMBOL(GetFileSize))(HANDLE hFile, LPDWORD lpFileSizeHigh) asm("__imp__GetFileSize@8") = GetFileSize;
+#ifdef _X86_
+DWORD (WINAPI *__MINGW_IMP_SYMBOL(GetFileSize))(HANDLE hFile, LPDWORD lpFileSizeHigh) __asm__("__imp__GetFileSize@8") = GetFileSize;
+#else
+DWORD (WINAPI *__MINGW_IMP_SYMBOL(GetFileSize))(HANDLE hFile, LPDWORD lpFileSizeHigh) __asm__("__imp_GetFileSize") = GetFileSize;
+#endif

@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009, 2010 mingw-w64 project
+   Copyright (c) 2009-2016  mingw-w64 project
 
    Contributing authors: Kai Tietz, Jonathan Yong
 
@@ -22,9 +22,15 @@
    DEALINGS IN THE SOFTWARE.
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef HAVE_MALLOC_H
 #include <malloc.h>
+#endif
 #include <string.h>
 #include <inttypes.h>
 #include <stdint.h>

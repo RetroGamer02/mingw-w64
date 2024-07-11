@@ -1,7 +1,7 @@
 /*
-    Copyright (c) 2013 mingw-w64 project
+    Copyright (c) 2020 mingw-w64 project
 
-    Contributing authors: Jean-Baptiste Kempf
+    Contributing authors: Steve Lhomme
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -23,14 +23,19 @@
 */
 
 #define getpid __getpid
-#define _getpid __getpid
 #include <windows.h>
+#include <process.h>
 #undef getpid
-#undef _getpid
 
-int getpid(void)
+int getpid( void );
+
+int getpid( void )
 {
-    return GetCurrentProcessId();
+    return (int)GetCurrentProcessId();
 }
 
-int (*__MINGW_IMP_SYMBOL(getpid))(void) asm("__imp__getpid") = getpid;
+#ifdef _X86_
+int (__cdecl *__MINGW_IMP_SYMBOL(getpid))(void) __asm__("__imp__getpid") = getpid;
+#else
+int (__cdecl *__MINGW_IMP_SYMBOL(getpid))(void) __asm__("__imp_getpid") = getpid;
+#endif

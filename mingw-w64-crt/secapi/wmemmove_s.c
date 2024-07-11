@@ -2,8 +2,8 @@
 #include <malloc.h>
 #include <errno.h>
 #include <msvcrt.h>
+#include <sec_api/wchar_s.h>
 
-errno_t __cdecl wmemmove_s (wchar_t *, size_t, const wchar_t *, size_t);
 static errno_t __cdecl _int_wmemmove_s (wchar_t *, size_t, const wchar_t*, size_t);
 static errno_t __cdecl _stub (wchar_t *, size_t, const wchar_t *, size_t);
 

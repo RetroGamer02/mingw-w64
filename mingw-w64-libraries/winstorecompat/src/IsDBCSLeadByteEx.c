@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2013 mingw-w64 project
+    Copyright (c) 2013-2016 mingw-w64 project
 
     Contributing authors: Jean-Baptiste Kempf
 
@@ -46,4 +46,8 @@ BOOL WINAPI IsDBCSLeadByteEx( UINT CodePage, BYTE TestChar )
     return FALSE;
 }
 
-BOOL (WINAPI *__MINGW_IMP_SYMBOL(IsDBCSLeadByteEx))(UINT CodePage, BYTE TestChar) asm("__imp__IsDBCSLeadByteEx@8") = IsDBCSLeadByteEx;
+#ifdef _X86_
+BOOL (WINAPI *__MINGW_IMP_SYMBOL(IsDBCSLeadByteEx))(UINT CodePage, BYTE TestChar) __asm__("__imp__IsDBCSLeadByteEx@8") = IsDBCSLeadByteEx;
+#else
+BOOL (WINAPI *__MINGW_IMP_SYMBOL(IsDBCSLeadByteEx))(UINT CodePage, BYTE TestChar) __asm__("__imp_IsDBCSLeadByteEx") = IsDBCSLeadByteEx;
+#endif

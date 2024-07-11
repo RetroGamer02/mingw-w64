@@ -11,7 +11,9 @@
 #include <rpc.h>
 #include <hstring.h>
 
-#if _WIN32_WINNT >= _WIN32_WINNT_WIN8
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void __RPC_USER HSTRING_UserFree(unsigned long *pFlags, HSTRING *ppidl);
 
@@ -30,8 +32,6 @@ unsigned long __RPC_USER HSTRING_UserSize64(unsigned long *pFlags, unsigned long
 
 unsigned char* __RPC_USER HSTRING_UserUnmarshal64(unsigned long *pFlags, unsigned char *pBuffer, HSTRING *ppidl);
 #endif
-
-/* */
 
 HRESULT WINAPI WindowsCompareStringOrdinal(HSTRING string1, HSTRING string2, INT32 *result);
 
@@ -53,7 +53,9 @@ PCWSTR WINAPI WindowsGetStringRawBuffer(HSTRING string, UINT32 *length);
 
 typedef HRESULT (WINAPI *PINSPECT_HSTRING_CALLBACK)(void *context, UINT_PTR readAddress, UINT32 length, BYTE *buffer);
 
+#if WINAPI_FAMILY_PARTITION (WINAPI_PARTITION_DESKTOP)
 HRESULT WINAPI WindowsInspectString(UINT_PTR targetHString, USHORT machine, PINSPECT_HSTRING_CALLBACK callback, void *context, UINT32 *length, UINT_PTR *targetStringAddress);
+#endif
 
 BOOL WINAPI WindowsIsStringEmpty(HSTRING string);
 
@@ -73,5 +75,8 @@ HRESULT WINAPI WindowsTrimStringEnd(HSTRING string, HSTRING trimString, HSTRING 
 
 HRESULT WINAPI WindowsTrimStringStart(HSTRING string, HSTRING trimString, HSTRING *newString);
 
+#ifdef __cplusplus
+}
 #endif
+
 #endif

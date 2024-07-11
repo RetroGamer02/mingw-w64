@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2011 mingw-w64 project
+   Copyright (c) 2011-2016  mingw-w64 project
 
    Permission is hereby granted, free of charge, to any person obtaining a
    copy of this software and associated documentation files (the "Software"),
@@ -21,7 +21,9 @@
 */
 
 #include <windows.h>
+#include <strsafe.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <malloc.h>
 #include <signal.h>
 #include "pthread.h"
@@ -51,6 +53,72 @@ static __pthread_idlist *idList = NULL;
 static size_t idListCnt = 0;
 static size_t idListMax = 0;
 static pthread_t idListNextId = 0;
+
+#if !defined(_MSC_VER)
+#define USE_VEH_FOR_MSC_SETTHREADNAME
+#endif
+#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+/* forbidden RemoveVectoredExceptionHandler/AddVectoredExceptionHandler APIs */
+#undef USE_VEH_FOR_MSC_SETTHREADNAME
+#endif
+
+#if defined(USE_VEH_FOR_MSC_SETTHREADNAME)
+static void *SetThreadName_VEH_handle = NULL;
+
+static LONG __stdcall
+SetThreadName_VEH (PEXCEPTION_POINTERS ExceptionInfo)
+{
+  if (ExceptionInfo->ExceptionRecord != NULL &&
+      ExceptionInfo->ExceptionRecord->ExceptionCode == EXCEPTION_SET_THREAD_NAME)
+    return EXCEPTION_CONTINUE_EXECUTION;
+
+  return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif
+
+typedef struct _THREADNAME_INFO
+{
+  DWORD  dwType;	/* must be 0x1000 */
+  LPCSTR szName;	/* pointer to name (in user addr space) */
+  DWORD  dwThreadID;	/* thread ID (-1=caller thread) */
+  DWORD  dwFlags;	/* reserved for future use, must be zero */
+} THREADNAME_INFO;
+
+static void
+SetThreadName (DWORD dwThreadID, LPCSTR szThreadName)
+{
+   THREADNAME_INFO info;
+   DWORD infosize;
+
+   info.dwType = 0x1000;
+   info.szName = szThreadName;
+   info.dwThreadID = dwThreadID;
+   info.dwFlags = 0;
+
+   infosize = sizeof (info) / sizeof (ULONG_PTR);
+
+#if defined(_MSC_VER) && !defined (USE_VEH_FOR_MSC_SETTHREADNAME)
+   __try
+     {
+       RaiseException (EXCEPTION_SET_THREAD_NAME, 0, infosize, (ULONG_PTR *)&info);
+     }
+   __except (EXCEPTION_EXECUTE_HANDLER)
+     {
+     }
+#else
+   /* Without a debugger we *must* have an exception handler,
+    * otherwise raising an exception will crash the process.
+    */
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+   if ((!IsDebuggerPresent ()) && (SetThreadName_VEH_handle == NULL))
+#else
+   if (!IsDebuggerPresent ())
+#endif
+     return;
+
+   RaiseException (EXCEPTION_SET_THREAD_NAME, 0, infosize, (ULONG_PTR *) &info);
+#endif
+}
 
 /* Search the list idList for an element with identifier ID.  If
    found, its associated _pthread_v pointer is returned, otherwise
@@ -234,11 +302,16 @@ push_pthread_mem (_pthread_v *sv)
     free (sv->keyval);
   if (sv->keyval_set)
     free (sv->keyval_set);
+  if (sv->thread_name)
+    free (sv->thread_name);
   memset (sv, 0, sizeof(struct _pthread_v));
   if (pthr_last == NULL)
     pthr_root = pthr_last = sv;
   else
+  {
     pthr_last->next = sv;
+    pthr_last = sv;
+  }
   pthread_mutex_unlock (&mtx_pthr_locked);
 }
 
@@ -317,6 +390,38 @@ free_pthread_mem (void)
   pthread_mutex_unlock (&mtx_pthr_locked);
 }
 
+static void
+replace_spin_keys (pthread_spinlock_t *old, pthread_spinlock_t new)
+{
+  if (old == NULL)
+    return;
+
+  if (EPERM == pthread_spin_destroy (old))
+    {
+#define THREADERR "Error cleaning up spin_keys for thread "
+#define THREADERR_LEN ((sizeof (THREADERR) / sizeof (*THREADERR)) - 1)
+#define THREADID_LEN THREADERR_LEN + 66 + 1 + 1
+      int i;
+      char thread_id[THREADID_LEN] = THREADERR;
+      _ultoa ((unsigned long) GetCurrentThreadId (), &thread_id[THREADERR_LEN], 10);
+      for (i = THREADERR_LEN; thread_id[i] != '\0' && i < THREADID_LEN - 1; i++)
+        {
+        }
+      if (i < THREADID_LEN - 1)
+        {
+          thread_id[i] = '\n';
+          thread_id[i + 1] = '\0';
+        }
+#undef THREADERR
+#undef THREADERR_LEN
+#undef THREADID_LEN
+      OutputDebugStringA (thread_id);
+      abort ();
+    }
+
+  *old = new;
+}
+
 /* Hook for TLS-based deregistration/registration of thread.  */
 static BOOL WINAPI
 __dyn_tls_pthread (HANDLE hDllHandle, DWORD dwReason, LPVOID lpreserved)
@@ -326,7 +431,21 @@ __dyn_tls_pthread (HANDLE hDllHandle, DWORD dwReason, LPVOID lpreserved)
 
   if (dwReason == DLL_PROCESS_DETACH)
     {
+#if defined(USE_VEH_FOR_MSC_SETTHREADNAME)
+      if (lpreserved == NULL && SetThreadName_VEH_handle != NULL)
+        {
+          RemoveVectoredExceptionHandler (SetThreadName_VEH_handle);
+          SetThreadName_VEH_handle = NULL;
+        }
+#endif
       free_pthread_mem ();
+    }
+  else if (dwReason == DLL_PROCESS_ATTACH)
+    {
+#if defined(USE_VEH_FOR_MSC_SETTHREADNAME)
+      SetThreadName_VEH_handle = AddVectoredExceptionHandler (1, &SetThreadName_VEH);
+      /* Can't do anything on error anyway, check for NULL later */
+#endif
     }
   else if (dwReason == DLL_THREAD_DETACH)
     {
@@ -344,7 +463,7 @@ __dyn_tls_pthread (HANDLE hDllHandle, DWORD dwReason, LPVOID lpreserved)
 	      t->h = NULL;
 	    }
 	  pthread_mutex_destroy (&t->p_clock);
-	  t->spin_keys = new_spin_keys;
+	  replace_spin_keys (&t->spin_keys, new_spin_keys);
 	  push_pthread_mem (t);
 	  t = NULL;
 	  TlsSetValue (_pthread_tls, t);
@@ -363,14 +482,14 @@ __dyn_tls_pthread (HANDLE hDllHandle, DWORD dwReason, LPVOID lpreserved)
 		CloseHandle (t->h);
 	      t->h = NULL;
 	      pthread_mutex_destroy(&t->p_clock);
-	      t->spin_keys = new_spin_keys;
+	      replace_spin_keys (&t->spin_keys, new_spin_keys);
 	      push_pthread_mem (t);
 	      t = NULL;
 	      TlsSetValue (_pthread_tls, t);
 	      return TRUE;
 	    }
 	  pthread_mutex_destroy(&t->p_clock);
-	  t->spin_keys = new_spin_keys;
+	  replace_spin_keys (&t->spin_keys, new_spin_keys);
 	}
       else if (t)
 	{
@@ -378,7 +497,7 @@ __dyn_tls_pthread (HANDLE hDllHandle, DWORD dwReason, LPVOID lpreserved)
 	    CloseHandle (t->evStart);
 	  t->evStart = NULL;
 	  pthread_mutex_destroy (&t->p_clock);
-	  t->spin_keys = new_spin_keys;
+	  replace_spin_keys (&t->spin_keys, new_spin_keys);
 	}
     }
   return TRUE;
@@ -547,7 +666,7 @@ pthread_delay_np (const struct timespec *interval)
     }
   pthread_testcancel ();
   if (s->evStart)
-    WaitForSingleObject (s->evStart, to);
+    _pthread_wait_for_single_object (s->evStart, to);
   else
     Sleep (to);
   pthread_testcancel ();
@@ -570,7 +689,7 @@ pthread_delay_np_ms (DWORD to)
     }
   pthread_testcancel ();
   if (s->evStart)
-    WaitForSingleObject (s->evStart, to);
+    _pthread_wait_for_single_object (s->evStart, to);
   else
     Sleep (to);
   pthread_testcancel ();
@@ -892,7 +1011,7 @@ __pthread_self_lite (void)
   t->tid = GetCurrentThreadId();
   t->evStart = CreateEvent (NULL, 1, 0, NULL);
   t->p_clock = PTHREAD_MUTEX_INITIALIZER;
-  t->spin_keys = new_spin_keys;
+  replace_spin_keys (&t->spin_keys, new_spin_keys);
   t->sched_pol = SCHED_OTHER;
   t->h = NULL; //GetCurrentThread();
   if (!DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &t->h, 0, FALSE, DUPLICATE_SAME_ACCESS))
@@ -919,7 +1038,7 @@ pthread_self (void)
 
 /* Internal helper for getting event handle of thread T.  */
 void *
-pthread_getevent ()
+pthread_getevent (void)
 {
   _pthread_v *t = __pthread_self_lite ();
   return (!t ? NULL : t->evStart);
@@ -1130,10 +1249,16 @@ pthread_cancel (pthread_t t)
 	  GetThreadContext(tv->h, &ctxt);
 #ifdef _M_X64
 	  ctxt.Rip = (uintptr_t) _pthread_invoke_cancel;
-#else
+#elif defined(_M_IX86)
 	  ctxt.Eip = (uintptr_t) _pthread_invoke_cancel;
+#elif defined(_M_ARM) || defined(_M_ARM64)
+	  ctxt.Pc = (uintptr_t) _pthread_invoke_cancel;
+#else
+#error Unsupported architecture
 #endif
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	  SetThreadContext (tv->h, &ctxt);
+#endif
 
 	  /* Also try deferred Cancelling */
 	  tv->cancelled = 1;
@@ -1270,7 +1395,23 @@ pthread_attr_getscope (const pthread_attr_t *a, int *flag)
 }
 
 int
-pthread_attr_getstackaddr (pthread_attr_t *attr, void **stack)
+pthread_attr_getstack (const pthread_attr_t *attr, void **stack, size_t *size)
+{
+  *stack = (char *) attr->stack - attr->s_size;
+  *size = attr->s_size;
+  return 0;
+}
+
+int
+pthread_attr_setstack (pthread_attr_t *attr, void *stack, size_t size)
+{
+  attr->s_size = size;
+  attr->stack = (char *) stack + size;
+  return 0;
+}
+
+int
+pthread_attr_getstackaddr (const pthread_attr_t *attr, void **stack)
 {
   *stack = attr->stack;
   return 0;
@@ -1350,11 +1491,21 @@ pthread_setcanceltype (int type, int *oldtype)
   return 0;
 }
 
+void _fpreset (void);
+
+#if defined(__i386__)
+/* Align ESP on 16-byte boundaries. */
+#  if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2)
+__attribute__((force_align_arg_pointer))
+#  endif
+#endif
 int
 pthread_create_wrapper (void *args)
 {
   unsigned rslt = 0;
   struct _pthread_v *tv = (struct _pthread_v *)args;
+
+  _fpreset();
 
   pthread_mutex_lock (&mtx_pthr_locked);
   pthread_mutex_lock (&tv->p_clock);
@@ -1369,19 +1520,23 @@ pthread_create_wrapper (void *args)
       intptr_t trslt = (intptr_t) 128;
       /* Provide to this thread a default exception handler.  */
       #ifdef __SEH__
-	asm ("\t.tl_start:\n"
-	  "\t.seh_handler __C_specific_handler, @except\n"
-	  "\t.seh_handlerdata\n"
-	  "\t.long 1\n"
-	  "\t.rva .tl_start, .tl_end, _gnu_exception_handler ,.tl_end\n"
-	  "\t.text"
-	  );
+	asm ("\t.tl_start:\n");
       #endif      /* Call function and save return value */
       pthread_mutex_unlock (&mtx_pthr_locked);
       if (tv->func)
         trslt = (intptr_t) tv->func(tv->ret_arg);
       #ifdef __SEH__
-	asm ("\tnop\n\t.tl_end: nop\n");
+	asm ("\tnop\n\t.tl_end: nop\n"
+#ifdef __arm__
+	  "\t.seh_handler __C_specific_handler, %except\n"
+#else
+	  "\t.seh_handler __C_specific_handler, @except\n"
+#endif
+	  "\t.seh_handlerdata\n"
+	  "\t.long 1\n"
+	  "\t.rva .tl_start, .tl_end, _gnu_exception_handler ,.tl_end\n"
+	  "\t.text"
+	  );
       #endif
       pthread_mutex_lock (&mtx_pthr_locked);
       tv->ret_arg = (void*) trslt;
@@ -1453,7 +1608,7 @@ pthread_create (pthread_t *th, const pthread_attr_t *attr, void *(* func)(void *
   while (++redo <= 4);
 
   tv->p_clock = PTHREAD_MUTEX_INITIALIZER;
-  tv->spin_keys = new_spin_keys;
+  replace_spin_keys (&tv->spin_keys, new_spin_keys);
   tv->valid = LIFE_THREAD;
   tv->sched.sched_priority = THREAD_PRIORITY_NORMAL;
   tv->sched_pol = SCHED_OTHER;
@@ -1491,7 +1646,7 @@ pthread_create (pthread_t *th, const pthread_attr_t *attr, void *(* func)(void *
       if (tv->evStart)
 	CloseHandle (tv->evStart);
       pthread_mutex_destroy (&tv->p_clock);
-      tv->spin_keys = new_spin_keys;
+      replace_spin_keys (&tv->spin_keys, new_spin_keys);
       tv->evStart = NULL;
       tv->h = 0;
       if (th)
@@ -1553,7 +1708,7 @@ pthread_join (pthread_t t, void **res)
   if (res)
     *res = tv->ret_arg;
   pthread_mutex_destroy (&tv->p_clock);
-  tv->spin_keys = new_spin_keys;
+  replace_spin_keys (&tv->spin_keys, new_spin_keys);
   push_pthread_mem (tv);
 
   return 0;
@@ -1587,12 +1742,12 @@ _pthread_tryjoin (pthread_t t, void **res)
     }
   if(tv->ended == 0 && WaitForSingleObject(tv->h, 0))
     {
-      if (tv->ended == 0);
+      if (tv->ended == 0)
         {
-	  pthread_mutex_unlock (&mtx_pthr_locked);
-	  /* pthread_testcancel (); */
-	  return EBUSY;
-	}
+	      pthread_mutex_unlock (&mtx_pthr_locked);
+	      /* pthread_testcancel (); */
+	      return EBUSY;
+	    }
     }
   CloseHandle (tv->h);
   if (tv->evStart)
@@ -1603,7 +1758,7 @@ _pthread_tryjoin (pthread_t t, void **res)
   if (res)
     *res = tv->ret_arg;
   pthread_mutex_destroy (&tv->p_clock);
-  tv->spin_keys = new_spin_keys;
+  replace_spin_keys (&tv->spin_keys, new_spin_keys);
 
   push_pthread_mem (tv);
 
@@ -1646,7 +1801,7 @@ pthread_detach (pthread_t t)
 	    CloseHandle (tv->evStart);
 	  tv->evStart = NULL;
 	  pthread_mutex_destroy (&tv->p_clock);
-	  tv->spin_keys = new_spin_keys;
+	  replace_spin_keys (&tv->spin_keys, new_spin_keys);
 	  push_pthread_mem (tv);
 	}
     }
@@ -1670,3 +1825,61 @@ pthread_setconcurrency (int new_level)
   return 0;
 }
 
+int
+pthread_setname_np (pthread_t thread, const char *name)
+{
+  struct _pthread_v *tv;
+  char *stored_name;
+
+  if (name == NULL)
+    return EINVAL;
+
+  tv = __pth_gpointer_locked (thread);
+  if (!tv || thread != tv->x || tv->in_cancel || tv->ended || tv->h == NULL
+      || tv->h == INVALID_HANDLE_VALUE)
+    return ESRCH;
+
+  stored_name = strdup (name);
+  if (stored_name == NULL)
+    return ENOMEM;
+
+  if (tv->thread_name != NULL)
+    free (tv->thread_name);
+
+  tv->thread_name = stored_name;
+  SetThreadName (tv->tid, name);
+  return 0;
+}
+
+int
+pthread_getname_np (pthread_t thread, char *name, size_t len)
+{
+  HRESULT result;
+  struct _pthread_v *tv;
+
+  if (name == NULL)
+    return EINVAL;
+
+  tv = __pth_gpointer_locked (thread);
+  if (!tv || thread != tv->x || tv->in_cancel || tv->ended || tv->h == NULL
+      || tv->h == INVALID_HANDLE_VALUE)
+    return ESRCH;
+
+  if (len < 1)
+    return ERANGE;
+
+  if (tv->thread_name == NULL)
+    {
+      name[0] = '\0';
+      return 0;
+    }
+
+  if (strlen (tv->thread_name) >= len)
+    return ERANGE;
+
+  result = StringCchCopyNA (name, len, tv->thread_name, len - 1);
+  if (SUCCEEDED (result))
+    return 0;
+
+  return ERANGE;
+}

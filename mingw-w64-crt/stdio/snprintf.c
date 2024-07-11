@@ -12,7 +12,7 @@ int __cdecl __ms_snprintf(char* buffer, size_t n, const char *format, ...)
   va_list argptr;
          
   va_start(argptr, format);
-  retval = _vsnprintf (buffer, n, format, argptr);
+  retval = __ms_vsnprintf(buffer, n, format, argptr);
   va_end(argptr);
   return retval;
 }

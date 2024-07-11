@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2013 mingw-w64 project
+    Copyright (c) 2013-2016 mingw-w64 project
 
     Contributing authors: Jean-Baptiste Kempf
 
@@ -38,4 +38,8 @@ DWORD WINAPI SleepEx(DWORD dwMilliseconds, BOOL bAlertable)
         return ret;
 }
 
-DWORD (WINAPI *__MINGW_IMP_SYMBOL(SleepEx))(DWORD dwMilliseconds, BOOL bAlertable) asm("__imp__SleepEx@8") = SleepEx;
+#ifdef _X86_
+DWORD (WINAPI *__MINGW_IMP_SYMBOL(SleepEx))(DWORD dwMilliseconds, BOOL bAlertable) __asm__("__imp__SleepEx@8") = SleepEx;
+#else
+DWORD (WINAPI *__MINGW_IMP_SYMBOL(SleepEx))(DWORD dwMilliseconds, BOOL bAlertable) __asm__("__imp_SleepEx") = SleepEx;
+#endif

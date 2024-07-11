@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2013 mingw-w64 project
+    Copyright (c) 2013-2016 mingw-w64 project
 
     Contributing authors: Jean-Baptiste Kempf
 
@@ -22,7 +22,9 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x501 /* UnhandledExceptionFilter is XP+ */
+#endif
 
 #define UnhandledExceptionFilter __UnhandledExceptionFilter
 #include <windef.h>
@@ -34,4 +36,8 @@ LONG WINAPI UnhandledExceptionFilter(struct _EXCEPTION_POINTERS *ExceptionInfo)
     return EXCEPTION_CONTINUE_SEARCH;
 }
 
-LONG (WINAPI *__MINGW_IMP_SYMBOL(UnhandledExceptionFilter))(struct _EXCEPTION_POINTERS *) asm("__imp__UnhandledExceptionFilter@4") = UnhandledExceptionFilter;
+#ifdef _X86_
+LONG (WINAPI *__MINGW_IMP_SYMBOL(UnhandledExceptionFilter))(struct _EXCEPTION_POINTERS *) __asm__("__imp__UnhandledExceptionFilter@4") = UnhandledExceptionFilter;
+#else
+LONG (WINAPI *__MINGW_IMP_SYMBOL(UnhandledExceptionFilter))(struct _EXCEPTION_POINTERS *) __asm__("__imp_UnhandledExceptionFilter") = UnhandledExceptionFilter;
+#endif

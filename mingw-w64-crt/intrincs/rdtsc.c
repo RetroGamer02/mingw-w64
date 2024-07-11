@@ -6,6 +6,15 @@
 
 #include <intrin.h>
 
+/* GCC 11 has this as a macro.  */
+#undef __rdtsc
+
+/* Clang has support for MSVC builtins, GCC doesn't */
+#ifndef __has_builtin
+  #define __has_builtin(x) 0
+#endif
+
+#if !__has_builtin(__rdtsc)
 unsigned __int64 __rdtsc(void)
 {
 #ifdef _WIN64
@@ -18,4 +27,4 @@ unsigned __int64 __rdtsc(void)
           : "=a" (val1), "=d" (val2));
       return ((unsigned __int64)val1) | (((unsigned __int64)val2) << 32);
 }
-
+#endif

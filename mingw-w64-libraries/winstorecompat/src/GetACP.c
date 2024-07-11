@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2013 mingw-w64 project
+    Copyright (c) 2013-2016 mingw-w64 project
 
     Contributing authors: Jean-Baptiste Kempf
 
@@ -34,4 +34,8 @@ UINT WINAPI GetACP(void)
     return CP_UTF8; /* utf-8 */
 }
 
-UINT (WINAPI *__MINGW_IMP_SYMBOL(GetACP))(void) asm("__imp__GetACP@0") = GetACP;
+#ifdef _X86_
+UINT (WINAPI *__MINGW_IMP_SYMBOL(GetACP))(void) __asm__("__imp__GetACP@0") = GetACP;
+#else
+UINT (WINAPI *__MINGW_IMP_SYMBOL(GetACP))(void) __asm__("__imp_GetACP") = GetACP;
+#endif

@@ -42,6 +42,8 @@
  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#define __LARGE_MBSTATE_T
+
 #include <limits.h>
 #include <stddef.h>
 #include <stdarg.h>
@@ -78,9 +80,9 @@ typedef struct _IFP
     const char *str;
   };
   int bch[1024];
-  int is_string : 1;
+  unsigned int is_string : 1;
   int back_top;
-  int seen_eof : 1;
+  unsigned int seen_eof : 1;
 } _IFP;
 
 static void *
@@ -1043,7 +1045,7 @@ __mingw_sformat (_IFP *s, const char *format, va_list argp)
 
 		  if (width > 0)
 		    width = remain;
-		    --wbuf_cur_sz;
+		  --wbuf_cur_sz;
 		}
 	      wbuf = resize_wbuf (wbuf_cur_sz, &wbuf_max_sz, wbuf);
 	      wbuf[wbuf_cur_sz++] = c;

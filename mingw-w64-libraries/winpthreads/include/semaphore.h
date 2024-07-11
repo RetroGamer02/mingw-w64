@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2011 mingw-w64 project
+   Copyright (c) 2011-2016  mingw-w64 project
 
    Permission is hereby granted, free of charge, to any person obtaining a
    copy of this software and associated documentation files (the "Software"),
@@ -27,14 +27,18 @@
 extern "C" {
 #endif
 
-#if defined DLL_EXPORT && !defined (WINPTHREAD_EXPORT_ALL_DEBUG)
-#ifdef IN_WINPTHREAD
-#define WINPTHREAD_SEMA_API __declspec(dllexport)
+#if defined(IN_WINPTHREAD)
+#  if defined(DLL_EXPORT) && !defined(WINPTHREAD_EXPORT_ALL_DEBUG)
+#    define WINPTHREAD_SEMA_API  __declspec(dllexport)  /* building the DLL  */
+#  else
+#    define WINPTHREAD_SEMA_API  /* building the static library  */
+#  endif
 #else
-#define WINPTHREAD_SEMA_API __declspec(dllimport)
-#endif
-#else
-#define WINPTHREAD_SEMA_API
+#  if defined(WINPTHREADS_USE_DLLIMPORT)
+#    define WINPTHREAD_SEMA_API  __declspec(dllimport)  /* user wants explicit `dllimport`  */
+#  else
+#    define WINPTHREAD_SEMA_API  /* the default; auto imported in case of DLL  */
+#  endif
 #endif
 
 /* Set this to 0 to disable it */

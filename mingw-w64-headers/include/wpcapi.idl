@@ -19,6 +19,10 @@
 import "oaidl.idl";
 import "ocidl.idl";
 
+#ifndef __WIDL__
+#define threading(model)
+#endif
+
 typedef [v1_enum] enum tagWPCFLAG_RESTRICTION {
     WPCFLAG_NO_RESTRICTION    = 0x0000,
     WPCFLAG_LOGGING_REQUIRED  = 0x0001,
@@ -105,7 +109,7 @@ interface IWindowsParentalControlsCore : IUnknown
 }
 
 [
-    uuid(4ff40a0f-3f3b-4d7c-a41b-4f39d7b44d05),
+    uuid(28b4d88b-e072-49e6-804d-26edbe21a7b9),
     object
 ]
 interface IWindowsParentalControls : IWindowsParentalControlsCore
@@ -113,4 +117,14 @@ interface IWindowsParentalControls : IWindowsParentalControlsCore
     HRESULT GetGamesSettings(
             [in] LPCWSTR pcszSID,
             [out] IWPCGamesSettings **ppSettings) ;
+}
+
+[
+    helpstring("WindowsParentalControls class"),
+    threading(both),
+    uuid(e77cc89b-7401-4c04-8ced-149db35add04)
+]
+coclass WindowsParentalControls
+{
+    [default] interface IWindowsParentalControls;
 }

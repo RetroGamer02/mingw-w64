@@ -1,6 +1,6 @@
 /*
     gendef - Generate list of exported symbols from a Portable Executable.
-    Copyright (C) 2009, 2010, 2011, 2012, 2013  mingw-w64 project
+    Copyright (C) 2009-2016  mingw-w64 project
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -41,8 +41,8 @@ void doredirect(const int redir) {
       fprintf(stderr, "kernel32.dll failed to load, failed to disable FS redirection.\n");
       return;
     }
-    redirectorfunction = (redirector)GetProcAddress(kernel32handle, "Wow64DisableWow64FsRedirection");
-    revertorfunction = (revertor)GetProcAddress(kernel32handle, "Wow64RevertWow64FsRedirection");
+    redirectorfunction = (redirector)(INT_PTR)GetProcAddress(kernel32handle, "Wow64DisableWow64FsRedirection");
+    revertorfunction = (revertor)(INT_PTR)GetProcAddress(kernel32handle, "Wow64RevertWow64FsRedirection");
     if (!redirectorfunction || ! revertorfunction) {
       FreeLibrary(kernel32handle);
       fprintf(stderr, "Wow64DisableWow64FsRedirection or Wow64RevertWow64FsRedirection functions missing.\n");

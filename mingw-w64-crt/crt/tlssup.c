@@ -20,13 +20,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include <malloc.h>
-
-#ifndef __INTERNAL_FUNC_DEFINED
-#define __INTERNAL_FUNC_DEFINED
-typedef void (__cdecl *_PVFV)(void);
-typedef int (__cdecl *_PIFV)(void);
-typedef void (__cdecl *_PVFI)(int);
-#endif
+#include <corecrt_startup.h>
 
 extern WINBOOL __mingw_TLScallback (HANDLE hDllHandle, DWORD reason, LPVOID reserved);
 
@@ -44,13 +38,13 @@ ULONG _tls_index = 0;
    We use here pointer-types for start/end so that tls-data remains
    aligned on pointer-size-width.  This seems to be required for
    pe-loader. */
-_CRTALLOC(".tls$AAA") char *_tls_start = NULL;
+_CRTALLOC(".tls") char *_tls_start = NULL;
 _CRTALLOC(".tls$ZZZ") char *_tls_end = NULL;
 
 _CRTALLOC(".CRT$XLA") PIMAGE_TLS_CALLBACK __xl_a = 0;
 _CRTALLOC(".CRT$XLZ") PIMAGE_TLS_CALLBACK __xl_z = 0;
 
-_CRTALLOC(".tls") const IMAGE_TLS_DIRECTORY _tls_used = {
+const IMAGE_TLS_DIRECTORY _tls_used = {
   (ULONG_PTR) &_tls_start, (ULONG_PTR) &_tls_end,
   (ULONG_PTR) &_tls_index, (ULONG_PTR) (&__xl_a+1),
   (ULONG) 0, (ULONG) 0
@@ -176,6 +170,6 @@ __dyn_tls_dtor (HANDLE hDllHandle, DWORD dwReason, LPVOID lpreserved)
 _CRTALLOC(".CRT$XLD") PIMAGE_TLS_CALLBACK __xl_d = (PIMAGE_TLS_CALLBACK) __dyn_tls_dtor;
 
 
-int mingw_initltsdrot_force = 0;
-int mingw_initltsdyn_force = 0;
-int mingw_initltssuo_force = 0;
+int __mingw_initltsdrot_force = 0;
+int __mingw_initltsdyn_force = 0;
+int __mingw_initltssuo_force = 0;

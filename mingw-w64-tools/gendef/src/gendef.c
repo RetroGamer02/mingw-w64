@@ -1,6 +1,6 @@
 /*
     gendef - Generate list of exported symbols from a Portable Executable.
-    Copyright (C) 2009-2014  mingw-w64 project
+    Copyright (C) 2009-2016  mingw-w64 project
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -204,7 +204,7 @@ show_usage (void)
 int main(int argc,char **argv)
 {
   int i;
-  Gendefopts *opt;
+  Gendefopts *opt, *next;
 
   if (argc < 2)
   {
@@ -242,11 +242,13 @@ int main(int argc,char **argv)
 	  free (gDta);
 	  gDta = NULL;
 	}
+      next = opt->next;
       free(opt->fninput);
       free(opt->fnoutput);
       free(opt);
-      opt = opt->next;
+      opt = next;
     }
+  imp32_free ();
   return 0;
 }
 
@@ -431,7 +433,7 @@ static void *
 map_va (uint32_t va)
 {
   PIMAGE_SECTION_HEADER sec;
-  uint32_t sec_cnt,i;
+  uint32_t sec_cnt,sz,i;
   char *dptr;
 
   if (gPEDta)
@@ -446,7 +448,9 @@ map_va (uint32_t va)
     }
   for (i = 0;i < sec_cnt;i++)
     {
-      if (va >= sec[i].VirtualAddress && va < (sec[i].VirtualAddress+sec[i].Misc.VirtualSize))
+      sz = sec[i].Misc.VirtualSize;
+      if (!sz) sz = sec[i].SizeOfRawData;
+      if (va >= sec[i].VirtualAddress && va < (sec[i].VirtualAddress+sz))
         {
           dptr = (char *) &gDta[va-sec[i].VirtualAddress+sec[i].PointerToRawData];
           return (void *)dptr;
@@ -654,7 +658,10 @@ dump_def (void)
       if (exp->name[0] == 0)
         fprintf (fp, "ord_%u", (unsigned int) exp->ord);
       else
-        fprintf (fp, "%s", exp->name);
+        {
+          const char *quote = strchr (exp->name, '.') ? "\"" : "";
+          fprintf (fp, "%s%s%s", quote, exp->name, quote);
+        }
       if (exp->name[0] == '?' && exp->name[1] == '?')
         {
           if (!strncmp (exp->name, "??_7", 4))
@@ -832,7 +839,7 @@ disassembleRetIntern (uint32_t pc, uint32_t *retpop, sAddresses *seen, sAddresse
       if (!sz || code == c_ill)
         {
           PRDEBUG(" %s = 0x08%x ILL (%u) at least one==%d\n",name,
-	 	  (unsigned int) pc, (unsigned int) sz,atleast_one[0]);
+		  (unsigned int) pc, (unsigned int) sz,atleast_one[0]);
 #if ENABLE_DEBUG == 1
       {
         unsigned char *ppc = (unsigned char *) map_va (pc);
@@ -1027,10 +1034,10 @@ redo_switch:
     PRDEBUG(" 0x%x illegal ", (unsigned int) b);
 #endif
     *aCode=c_ill; return 0;
-  case c_4: sz++;
-  case c_3: sz++;
+  case c_4: sz++;/* fallthru */
+  case c_3: sz++;/* fallthru */
   case c_lb:
-  case c_2: sz++;
+  case c_2: sz++;/* fallthru */
   case c_retn: case c_retf:
   case c_iret: case c_int3:
   case c_ad: case c_op:
@@ -1057,7 +1064,7 @@ redo_switch:
           p = (unsigned char *) map_va (pc + sz);
           if (!p) { *aCode=c_ill; return 0; }
 #if ENABLE_DEBUG == 1
-    enter_save_insn(lw,p[0]);
+	  enter_save_insn(lw,p[0]);
 #endif
           b&=~0x7; b|=(p[0]&7);
 	  sz+=1;

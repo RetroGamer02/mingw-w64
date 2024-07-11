@@ -235,7 +235,7 @@ extern "C" {
   RPCRTAPI RPC_STATUS RPC_ENTRY RpcServerUseProtseqIfExA(RPC_CSTR Protseq,unsigned int MaxCalls,RPC_IF_HANDLE IfSpec,void *SecurityDescriptor,PRPC_POLICY Policy);
   RPCRTAPI RPC_STATUS RPC_ENTRY RpcServerUseProtseqIfW(RPC_WSTR Protseq,unsigned int MaxCalls,RPC_IF_HANDLE IfSpec,void *SecurityDescriptor);
   RPCRTAPI RPC_STATUS RPC_ENTRY RpcServerUseProtseqIfExW(RPC_WSTR Protseq,unsigned int MaxCalls,RPC_IF_HANDLE IfSpec,void *SecurityDescriptor,PRPC_POLICY Policy);
-  RPCRTAPI void RPC_ENTRY RpcServerYield ();
+  RPCRTAPI void RPC_ENTRY RpcServerYield (void);
   RPCRTAPI RPC_STATUS RPC_ENTRY RpcMgmtStatsVectorFree(RPC_STATS_VECTOR **StatsVector);
   RPCRTAPI RPC_STATUS RPC_ENTRY RpcMgmtInqStats(RPC_BINDING_HANDLE Binding,RPC_STATS_VECTOR **Statistics);
   RPCRTAPI RPC_STATUS RPC_ENTRY RpcMgmtIsServerListening(RPC_BINDING_HANDLE Binding);
@@ -454,7 +454,7 @@ extern "C" {
 
   RPCRTAPI RPC_STATUS RPC_ENTRY RpcImpersonateClient(RPC_BINDING_HANDLE BindingHandle);
   RPCRTAPI RPC_STATUS RPC_ENTRY RpcRevertToSelfEx(RPC_BINDING_HANDLE BindingHandle);
-  RPCRTAPI RPC_STATUS RPC_ENTRY RpcRevertToSelf();
+  RPCRTAPI RPC_STATUS RPC_ENTRY RpcRevertToSelf(void);
   RPCRTAPI RPC_STATUS RPC_ENTRY RpcBindingInqAuthClientA(RPC_BINDING_HANDLE ClientBinding,RPC_AUTHZ_HANDLE *Privs,RPC_CSTR *ServerPrincName,unsigned __LONG32 *AuthnLevel,unsigned __LONG32 *AuthnSvc,unsigned __LONG32 *AuthzSvc);
   RPCRTAPI RPC_STATUS RPC_ENTRY RpcBindingInqAuthClientW(RPC_BINDING_HANDLE ClientBinding,RPC_AUTHZ_HANDLE *Privs,RPC_WSTR *ServerPrincName,unsigned __LONG32 *AuthnLevel,unsigned __LONG32 *AuthnSvc,unsigned __LONG32 *AuthzSvc);
   RPCRTAPI RPC_STATUS RPC_ENTRY RpcBindingInqAuthClientExA(RPC_BINDING_HANDLE ClientBinding,RPC_AUTHZ_HANDLE *Privs,RPC_CSTR *ServerPrincName,unsigned __LONG32 *AuthnLevel,unsigned __LONG32 *AuthnSvc,unsigned __LONG32 *AuthzSvc,unsigned __LONG32 Flags);
@@ -500,15 +500,15 @@ extern "C" {
 
   RPCRTAPI RPC_STATUS RPC_ENTRY RpcBindingServerFromClient(RPC_BINDING_HANDLE ClientBinding,RPC_BINDING_HANDLE *ServerBinding);
   RPCRTAPI DECLSPEC_NORETURN void RPC_ENTRY RpcRaiseException(RPC_STATUS exception);
-  RPCRTAPI RPC_STATUS RPC_ENTRY RpcTestCancel();
+  RPCRTAPI RPC_STATUS RPC_ENTRY RpcTestCancel(void);
   RPCRTAPI RPC_STATUS RPC_ENTRY RpcServerTestCancel(RPC_BINDING_HANDLE BindingHandle);
   RPCRTAPI RPC_STATUS RPC_ENTRY RpcCancelThread(void *Thread);
   RPCRTAPI RPC_STATUS RPC_ENTRY RpcCancelThreadEx(void *Thread,__LONG32 Timeout);
   RPCRTAPI RPC_STATUS RPC_ENTRY UuidCreate(UUID *Uuid);
   RPCRTAPI RPC_STATUS RPC_ENTRY UuidCreateSequential(UUID *Uuid);
-  RPCRTAPI RPC_STATUS RPC_ENTRY UuidToStringA(UUID *Uuid,RPC_CSTR *StringUuid);
+  RPCRTAPI RPC_STATUS RPC_ENTRY UuidToStringA(const UUID *Uuid,RPC_CSTR *StringUuid);
   RPCRTAPI RPC_STATUS RPC_ENTRY UuidFromStringA(RPC_CSTR StringUuid,UUID *Uuid);
-  RPCRTAPI RPC_STATUS RPC_ENTRY UuidToStringW(UUID *Uuid,RPC_WSTR *StringUuid);
+  RPCRTAPI RPC_STATUS RPC_ENTRY UuidToStringW(const UUID *Uuid,RPC_WSTR *StringUuid);
   RPCRTAPI RPC_STATUS RPC_ENTRY UuidFromStringW(RPC_WSTR StringUuid,UUID *Uuid);
   RPCRTAPI signed int RPC_ENTRY UuidCompare(UUID *Uuid1,UUID *Uuid2,RPC_STATUS *Status);
   RPCRTAPI RPC_STATUS RPC_ENTRY UuidCreateNil(UUID *NilUuid);

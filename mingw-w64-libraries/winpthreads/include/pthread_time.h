@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2011 mingw-w64 project
+   Copyright (c) 2011-2016  mingw-w64 project
 
    Permission is hereby granted, free of charge, to any person obtaining a
    copy of this software and associated documentation files (the "Software"),
@@ -68,6 +68,10 @@ typedef int clockid_t;
 
 #ifndef CLOCK_THREAD_CPUTIME_ID
 #define CLOCK_THREAD_CPUTIME_ID     3
+#endif
+
+#ifndef CLOCK_REALTIME_COARSE
+#define CLOCK_REALTIME_COARSE       4
 #endif
 
 #ifdef __cplusplus

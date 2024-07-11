@@ -10,8 +10,8 @@
    use, modify or distribute it freely.
 
    This code is distributed in the hope that it will be useful but
-   WITHOUT ANY WARRANTY. ALL WARRENTIES, EXPRESS OR IMPLIED ARE HEREBY
-   DISCLAMED. This includes but is not limited to warrenties of
+   WITHOUT ANY WARRANTY. ALL WARRANTIES, EXPRESS OR IMPLIED ARE HEREBY
+   DISCLAMED. This includes but is not limited to warranties of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
 
@@ -21,6 +21,7 @@
 #include <stdarg.h>
 #include <memory.h>
 #include <internal.h>
+#include <stdint.h>
 
 #if defined(__CYGWIN__)
 #include <wchar.h>
@@ -47,7 +48,7 @@
 
 extern char __RUNTIME_PSEUDO_RELOC_LIST__;
 extern char __RUNTIME_PSEUDO_RELOC_LIST_END__;
-extern char __MINGW_LSYMBOL(_image_base__);
+extern IMAGE_DOS_HEADER __MINGW_LSYMBOL(_image_base__);
 
 void _pei386_runtime_relocator (void);
 
@@ -169,6 +170,8 @@ extern PBYTE _GetPEImageBase (void);
 typedef struct sSecInfo {
   /* Keeps altered section flags, or zero if nothing was changed.  */
   DWORD old_protect;
+  PVOID base_address;
+  SIZE_T region_size;
   PBYTE sec_start;
   PIMAGE_SECTION_HEADER hash;
 } sSecInfo;
@@ -209,8 +212,15 @@ mark_section_writable (LPVOID addr)
   if (b.Protect != PAGE_EXECUTE_READWRITE && b.Protect != PAGE_READWRITE
       && b.Protect != PAGE_EXECUTE_WRITECOPY && b.Protect != PAGE_WRITECOPY)
     {
+      ULONG new_protect;
+      if (b.Protect == PAGE_READONLY)
+        new_protect = PAGE_READWRITE;
+      else
+        new_protect = PAGE_EXECUTE_READWRITE;
+      the_secs[i].base_address = b.BaseAddress;
+      the_secs[i].region_size = b.RegionSize;
       if (!VirtualProtect (b.BaseAddress, b.RegionSize,
-			   PAGE_EXECUTE_READWRITE,
+			   new_protect,
 			   &the_secs[i].old_protect))
 	__report_error ("  VirtualProtect failed with code 0x%x",
 	  (int) GetLastError ());
@@ -223,22 +233,14 @@ static void
 restore_modified_sections (void)
 {
   int i;
-  MEMORY_BASIC_INFORMATION b;
   DWORD oldprot;
 
   for (i = 0; i < maxSections; i++)
     {
       if (the_secs[i].old_protect == 0)
         continue;
-      if (!VirtualQuery (the_secs[i].sec_start, &b, sizeof(b)))
-	{
-	  __report_error ("  VirtualQuery failed for %d bytes at address %p",
-			  (int) the_secs[i].hash->Misc.VirtualSize,
-			  the_secs[i].sec_start);
-	  return;
-	}
-      VirtualProtect (b.BaseAddress, b.RegionSize, the_secs[i].old_protect,
-		      &oldprot);
+      VirtualProtect (the_secs[i].base_address, the_secs[i].region_size,
+                      the_secs[i].old_protect, &oldprot);
     }
 }
 
@@ -310,6 +312,7 @@ do_pseudo_reloc (void * start, void * end, void * base)
   ptrdiff_t reloc_target = (ptrdiff_t) ((char *)end - (char*)start);
   runtime_pseudo_reloc_v2 *v2_hdr = (runtime_pseudo_reloc_v2 *) start;
   runtime_pseudo_reloc_item_v2 *r;
+  unsigned int bits;
 
   /* A valid relocation list will contain at least one entry, and
    * one v1 data structure (the smallest one) requires two DWORDs.
@@ -439,6 +442,23 @@ do_pseudo_reloc (void * start, void * end, void * base)
       reldata -= ((ptrdiff_t) base + r->sym);
       reldata += addr_imp;
 
+      bits = r->flags & 0xff;
+      if (bits < sizeof(ptrdiff_t)*8)
+        {
+          /* Check for overflows. We don't know if the target address is
+           * interpreted as a relative offset or as a truncated absolute
+           * address - to avoid false positives, allow offsets within the
+           * whole range of signed and unsigned N bits numbers, but error
+           * out for anything outside of that. Thus for relative offsets,
+           * this won't catch offsets that are only barely too large. */
+          ptrdiff_t max_unsigned = (1LL << bits) - 1;
+          ptrdiff_t min_signed = UINTPTR_MAX << (bits - 1);
+          if (reldata > max_unsigned || reldata < min_signed)
+	    __report_error ("%d bit pseudo relocation at %p out of range, "
+                            "targeting %p, yielding the value %p.\n",
+                            bits, reloc_target, addr_imp, reldata);
+        }
+
       /* Write the new relocation value back to *reloc_target */
       switch ((r->flags & 0xff))
 	{
@@ -460,6 +480,7 @@ do_pseudo_reloc (void * start, void * end, void * base)
      }
 }
 
+__attribute__((used)) /* required due to bug in gcc / ld */
 void
 _pei386_runtime_relocator (void)
 {

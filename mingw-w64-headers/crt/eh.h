@@ -3,6 +3,13 @@
  * This file is part of the mingw-w64 runtime package.
  * No warranty is given; refer to the file DISCLAIMER.PD within this package.
  */
+
+#ifndef __cplusplus
+#error eh.h is only for C++!
+#endif
+
+#include <typeinfo>
+
 #include <crtdefs.h>
 
 #ifndef _EH_H_
@@ -12,10 +19,6 @@
 
 #pragma pack(push,_CRT_PACKING)
 
-#ifndef __cplusplus
-#error eh.h is only for C++!
-#endif
-
 typedef void (__cdecl *terminate_function)();
 typedef void (__cdecl *terminate_handler)();
 typedef void (__cdecl *unexpected_function)();
@@ -24,7 +27,7 @@ typedef void (__cdecl *unexpected_handler)();
 struct _EXCEPTION_POINTERS;
 typedef void (__cdecl *_se_translator_function)(unsigned int,struct _EXCEPTION_POINTERS *);
 
-_CRTIMP __declspec(noreturn) void __cdecl terminate(void);
+_CRTIMP __MINGW_ATTRIB_NORETURN void __cdecl terminate(void);
 _CRTIMP void __cdecl unexpected(void);
 _CRTIMP int __cdecl _is_exception_typeof(const std::type_info &_Type,struct _EXCEPTION_POINTERS *_ExceptionPtr);
 _CRTIMP terminate_function __cdecl set_terminate(terminate_function _NewPtFunc);

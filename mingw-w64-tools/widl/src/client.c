@@ -19,13 +19,9 @@
  */
 
 #include "config.h"
-#include "wine/port.h"
- 
+
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef HAVE_UNISTD_H
-# include <unistd.h>
-#endif
 #include <string.h>
 #include <ctype.h>
 
@@ -52,17 +48,16 @@ static void print_client( const char *format, ... )
 
 static void write_client_func_decl( const type_t *iface, const var_t *func )
 {
-    const char *callconv = get_attrp(func->type->attrs, ATTR_CALLCONV);
-    const var_list_t *args = type_get_function_args(func->type);
-    type_t *rettype = type_function_get_rettype(func->type);
+    const char *callconv = get_attrp(func->declspec.type->attrs, ATTR_CALLCONV);
+    const var_list_t *args = type_function_get_args(func->declspec.type);
+    const decl_spec_t *rettype = type_function_get_ret(func->declspec.type);
 
     if (!callconv) callconv = "__cdecl";
     write_type_decl_left(client, rettype);
     fprintf(client, " %s ", callconv);
     fprintf(client, "%s%s(\n", prefix_client, get_name(func));
     indent++;
-    if (args)
-        write_args(client, args, iface->name, 0, TRUE, FILTER_NONE);
+    if (args) write_args(client, args, iface->name, 0, TRUE, NAME_DEFAULT);
     else
         print_client("void");
     fprintf(client, ")\n");
@@ -74,9 +69,9 @@ static void write_function_stub( const type_t *iface, const var_t *func,
 {
     unsigned char explicit_fc, implicit_fc;
     int has_full_pointer = is_full_pointer_function(func);
-    var_t *retval = type_function_get_retval(func->type);
+    var_t *retval = type_function_get_retval(func->declspec.type);
     const var_t *handle_var = get_func_handle_var( iface, func, &explicit_fc, &implicit_fc );
-    int has_ret = !is_void(retval->type);
+    int has_ret = !is_void(retval->declspec.type);
 
     if (is_interpreted_func( iface, func ))
     {
@@ -91,13 +86,13 @@ static void write_function_stub( const type_t *iface, const var_t *func,
     print_client("MIDL_STUB_MESSAGE _StubMsg;\n");
     if (handle_var)
     {
-        if (explicit_fc == RPC_FC_BIND_GENERIC)
+        if (explicit_fc == FC_BIND_GENERIC)
             print_client("%s %s;\n",
                          get_explicit_generic_handle_type(handle_var)->name, handle_var->name );
         print_client("RPC_BINDING_HANDLE _Handle;\n");
     }
 
-    if (has_ret && decl_indirect(retval->type))
+    if (has_ret && decl_indirect(retval->declspec.type))
     {
         print_client("void *_p_%s;\n", retval->name);
     }
@@ -113,7 +108,7 @@ static void write_function_stub( const type_t *iface, const var_t *func,
 
     print_client("NdrFreeBuffer(&__frame->_StubMsg);\n");
 
-    if (explicit_fc == RPC_FC_BIND_GENERIC)
+    if (explicit_fc == FC_BIND_GENERIC)
     {
         fprintf(client, "\n");
         print_client("if (__frame->_Handle)\n");
@@ -136,7 +131,7 @@ static void write_function_stub( const type_t *iface, const var_t *func,
     if (has_ret)
     {
         print_client("%s", "");
-        write_type_decl(client, retval->type, retval->name, "");
+        write_type_decl(client, &retval->declspec, retval->name);
         fprintf(client, ";\n");
     }
     print_client("RPC_MESSAGE _RpcMessage;\n");
@@ -144,10 +139,10 @@ static void write_function_stub( const type_t *iface, const var_t *func,
     if (handle_var)
     {
         print_client( "__frame->_Handle = 0;\n" );
-        if (explicit_fc == RPC_FC_BIND_GENERIC)
+        if (explicit_fc == FC_BIND_GENERIC)
             print_client("__frame->%s = %s;\n", handle_var->name, handle_var->name );
     }
-    if (has_ret && decl_indirect(retval->type))
+    if (has_ret && decl_indirect(retval->declspec.type))
     {
         print_client("__frame->_p_%s = &%s;\n", retval->name, retval->name);
     }
@@ -180,21 +175,21 @@ static void write_function_stub( const type_t *iface, const var_t *func,
 
     switch (explicit_fc)
     {
-    case RPC_FC_BIND_PRIMITIVE:
+    case FC_BIND_PRIMITIVE:
         print_client("__frame->_Handle = %s;\n", handle_var->name);
         fprintf(client, "\n");
         break;
-    case RPC_FC_BIND_GENERIC:
+    case FC_BIND_GENERIC:
         print_client("__frame->_Handle = %s_bind(%s);\n",
                      get_explicit_generic_handle_type(handle_var)->name, handle_var->name);
         fprintf(client, "\n");
         break;
-    case RPC_FC_BIND_CONTEXT:
+    case FC_BIND_CONTEXT:
     {
         /* if the context_handle attribute appears in the chain of types
          * without pointers being followed, then the context handle must
          * be direct, otherwise it is a pointer */
-        int is_ch_ptr = !is_aliaschain_attr(handle_var->type, ATTR_CONTEXTHANDLE);
+        int is_ch_ptr = !is_aliaschain_attr(handle_var->declspec.type, ATTR_CONTEXTHANDLE);
         print_client("if (%s%s != 0)\n", is_ch_ptr ? "*" : "", handle_var->name);
         indent++;
         print_client("__frame->_Handle = NDRCContextBinding(%s%s);\n",
@@ -257,9 +252,9 @@ static void write_function_stub( const type_t *iface, const var_t *func,
     /* unmarshal return value */
     if (has_ret)
     {
-        if (decl_indirect(retval->type))
+        if (decl_indirect(retval->declspec.type))
             print_client("MIDL_memset(&%s, 0, sizeof(%s));\n", retval->name, retval->name);
-        else if (is_ptr(retval->type) || is_array(retval->type))
+        else if (is_ptr(retval->declspec.type) || is_array(retval->declspec.type))
             print_client("%s = 0;\n", retval->name);
         write_remoting_arguments(client, indent, func, "", PASS_RETURN, PHASE_UNMARSHAL);
     }
@@ -287,6 +282,68 @@ static void write_function_stub( const type_t *iface, const var_t *func,
     fprintf(client, "\n");
 }
 
+static void write_serialize_function(FILE *file, const type_t *type, const type_t *iface,
+                                     const char *func_name, const char *ret_type)
+{
+    enum stub_mode mode = get_stub_mode();
+    static int emitted_pickling_info;
+
+    if (iface && !type->typestring_offset)
+    {
+        /* FIXME: Those are mostly basic types. They should be implemented
+         * using NdrMesSimpleType* functions */
+        if (ret_type) warning("Serialization of type %s is not supported\n", type->name);
+        return;
+    }
+
+    if (!emitted_pickling_info && iface && mode != MODE_Os)
+    {
+        fprintf(file, "static const MIDL_TYPE_PICKLING_INFO __MIDL_TypePicklingInfo =\n");
+        fprintf(file, "{\n");
+        fprintf(file, "    0x33205054,\n");
+        fprintf(file, "    0x3,\n");
+        fprintf(file, "    0,\n");
+        fprintf(file, "    0,\n");
+        fprintf(file, "    0\n");
+        fprintf(file, "};\n");
+        fprintf(file, "\n");
+        emitted_pickling_info = 1;
+    }
+
+    /* FIXME: Assuming explicit handle */
+
+    fprintf(file, "%s __cdecl %s_%s(handle_t IDL_handle, %s *IDL_type)%s\n",
+            ret_type ? ret_type : "void", type->name, func_name, type->name, iface ? "" : ";");
+    if (!iface) return; /* declaration only */
+
+    fprintf(file, "{\n");
+    fprintf(file, "    %sNdrMesType%s%s(\n", ret_type ? "return " : "", func_name,
+            mode != MODE_Os ? "2" : "");
+    fprintf(file, "        IDL_handle,\n");
+    if (mode != MODE_Os)
+        fprintf(file, "        (MIDL_TYPE_PICKLING_INFO*)&__MIDL_TypePicklingInfo,\n");
+    fprintf(file, "        &%s_StubDesc,\n", iface->name);
+    fprintf(file, "        (PFORMAT_STRING)&__MIDL_TypeFormatString.Format[%u],\n",
+            type->typestring_offset);
+    fprintf(file, "        IDL_type);\n");
+    fprintf(file, "}\n");
+    fprintf(file, "\n");
+}
+
+void write_serialize_functions(FILE *file, const type_t *type, const type_t *iface)
+{
+    if (is_attr(type->attrs, ATTR_ENCODE))
+    {
+        write_serialize_function(file, type, iface, "AlignSize", "SIZE_T");
+        write_serialize_function(file, type, iface, "Encode", NULL);
+    }
+    if (is_attr(type->attrs, ATTR_DECODE))
+    {
+        write_serialize_function(file, type, iface, "Decode", NULL);
+        write_serialize_function(file, type, iface, "Free", NULL);
+    }
+}
+
 static void write_function_stubs(type_t *iface, unsigned int *proc_offset)
 {
     const statement_t *stmt;
@@ -296,11 +353,30 @@ static void write_function_stubs(type_t *iface, unsigned int *proc_offset)
     if (!implicit_handle)
         print_client("static RPC_BINDING_HANDLE %s__MIDL_AutoBindHandle;\n\n", iface->name);
 
-    STATEMENTS_FOR_EACH_FUNC( stmt, type_iface_get_stmts(iface) )
+    LIST_FOR_EACH_ENTRY( stmt, type_iface_get_stmts(iface), const statement_t, entry )
     {
-        const var_t *func = stmt->u.var;
-        write_function_stub( iface, func, method_count++, *proc_offset );
-        *proc_offset += get_size_procformatstring_func( iface, func );
+        switch (stmt->type)
+        {
+        case STMT_DECLARATION:
+        {
+            const var_t *func = stmt->u.var;
+            if (stmt->u.var->declspec.stgclass != STG_NONE
+                || type_get_type_detect_alias(stmt->u.var->declspec.type) != TYPE_FUNCTION)
+                continue;
+            write_function_stub( iface, func, method_count++, *proc_offset );
+            *proc_offset += get_size_procformatstring_func( iface, func );
+            break;
+        }
+        case STMT_TYPEDEF:
+        {
+            typeref_t *ref;
+            if (stmt->u.type_list) LIST_FOR_EACH_ENTRY(ref, stmt->u.type_list, typeref_t, entry)
+                write_serialize_functions(client, ref->type, iface);
+            break;
+        }
+        default:
+            break;
+        }
     }
 }
 
@@ -344,7 +420,7 @@ static void write_stubdescriptor(type_t *iface, int expr_eval_routines)
     print_client("1, /* -error bounds_check flag */\n");
     print_client("0x%x, /* Ndr library version */\n", get_stub_mode() == MODE_Oif ? 0x50002 : 0x10001);
     print_client("0,\n");
-    print_client("0x50100a4, /* MIDL Version 5.1.164 */\n");
+    print_client("0x50200ca, /* MIDL Version 5.2.202 */\n");
     print_client("0,\n");
     print_client("%s,\n", list_empty(&user_type_list) ? "0" : "UserMarshalRoutines");
     print_client("0,  /* notify & notify_flag routine table */\n");
@@ -361,7 +437,7 @@ static void write_stubdescriptor(type_t *iface, int expr_eval_routines)
 static void write_clientinterfacedecl(type_t *iface)
 {
     unsigned int ver = get_attrv(iface->attrs, ATTR_VERSION);
-    const UUID *uuid = get_attrp(iface->attrs, ATTR_UUID);
+    const struct uuid *uuid = get_attrp(iface->attrs, ATTR_UUID);
     const str_list_t *endpoints = get_attrp(iface->attrs, ATTR_ENDPOINT);
 
     if (endpoints) write_endpoints( client, iface->name, endpoints );
@@ -407,7 +483,7 @@ static void write_implicithandledecl(type_t *iface)
 
     if (implicit_handle)
     {
-        write_type_decl( client, implicit_handle->type, implicit_handle->name, "");
+        write_type_decl(client, &implicit_handle->declspec, implicit_handle->name);
         fprintf(client, ";\n\n");
     }
 }
@@ -438,7 +514,7 @@ static void write_client_ifaces(const statement_list_t *stmts, int expr_eval_rou
     {
         if (stmt->type == STMT_TYPE && type_get_type(stmt->u.type) == TYPE_INTERFACE)
         {
-            int has_func = 0;
+            int needs_stub = 0;
             const statement_t *stmt2;
             type_t *iface = stmt->u.type;
             if (!need_stub(iface))
@@ -449,13 +525,31 @@ static void write_client_ifaces(const statement_list_t *stmts, int expr_eval_rou
             fprintf(client, " */\n");
             fprintf(client, "\n");
 
-            STATEMENTS_FOR_EACH_FUNC(stmt2, type_iface_get_stmts(iface))
+            LIST_FOR_EACH_ENTRY(stmt2, type_iface_get_stmts(iface), const statement_t, entry)
             {
-                has_func = 1;
-                break;
+                if (stmt2->type == STMT_DECLARATION && stmt2->u.var->declspec.stgclass == STG_NONE &&
+                    type_get_type_detect_alias(stmt2->u.var->declspec.type) == TYPE_FUNCTION)
+                {
+                    needs_stub = 1;
+                    break;
+                }
+                if (stmt2->type == STMT_TYPEDEF)
+                {
+                    typeref_t *ref;
+                    if (stmt2->u.type_list) LIST_FOR_EACH_ENTRY(ref, stmt2->u.type_list, typeref_t, entry)
+                    {
+                        if (is_attr(ref->type->attrs, ATTR_ENCODE)
+                            || is_attr(ref->type->attrs, ATTR_DECODE))
+                        {
+                            needs_stub = 1;
+                            break;
+                        }
+                    }
+                    if (needs_stub)
+                        break;
+                }
             }
-
-            if (has_func)
+            if (needs_stub)
             {
                 write_implicithandledecl(iface);
 
@@ -528,26 +622,6 @@ void write_client(const statement_list_t *stmts)
     if (!client)
         return;
 
-    if (do_win32 && do_win64)
-    {
-        fprintf(client, "#ifndef _WIN64\n\n");
-        pointer_size = 4;
-        write_client_routines( stmts );
-        fprintf(client, "\n#else /* _WIN64 */\n\n");
-        pointer_size = 8;
-        write_client_routines( stmts );
-        fprintf(client, "\n#endif /* _WIN64 */\n");
-    }
-    else if (do_win32)
-    {
-        pointer_size = 4;
-        write_client_routines( stmts );
-    }
-    else if (do_win64)
-    {
-        pointer_size = 8;
-        write_client_routines( stmts );
-    }
-
+    write_client_routines( stmts );
     fclose(client);
 }

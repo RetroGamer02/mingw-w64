@@ -592,6 +592,8 @@ TOOLS_GENIDL_FALSE
 TOOLS_GENIDL_TRUE
 TOOLS_GENDEF_FALSE
 TOOLS_GENDEF_TRUE
+LIBRARIES_WINPTHREADS_FALSE
+LIBRARIES_WINPTHREADS_TRUE
 LIBRARIES_PSEH_FALSE
 LIBRARIES_PSEH_TRUE
 LIBRARIES_MANGLE_FALSE
@@ -694,6 +696,7 @@ ac_subdirs_all='mingw-w64-headers
 mingw-w64-crt
 mingw-w64-libraries/libmangle
 mingw-w64-libraries/pseh
+mingw-w64-libraries/winpthreads
 mingw-w64-tools/gendef
 mingw-w64-tools/genidl'
 
@@ -1324,10 +1327,11 @@ Optional Packages:
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --without-headers       Skip building the mingw-w64 headers
   --without-crt           Skip building the mingw-w64 crt
-  --with-libraries=ARG    Build the extra mingw-w64 libs, where ARG is one of
-                          libmangle, pseh, or all
-  --with-tools=ARG        Build the extra mingw-w64 tools, where ARG is one of
-                          gendef, genidl, or all
+  --with-libraries=ARG    Build the extra mingw-w64 libs, where ARG is comma
+                          separated list of libmangle, pseh, winpthreads, or
+                          all
+  --with-tools=ARG        Build the extra mingw-w64 tools, where ARG is comma
+                          separated list of gendef, genidl, or all
 
 Report bugs to <mingw-w64-public@lists.sourceforge.net>.
 _ACEOF
@@ -1813,7 +1817,7 @@ fi
   MAINT=$MAINTAINER_MODE_TRUE
 
 
-am__api_version='1.14'
+am__api_version='1.15'
 
 # Find a good install program.  We prefer a C program (faster),
 # so one script is as good as another.  But avoid the broken or
@@ -1985,8 +1989,8 @@ test "$program_suffix" != NONE &&
 ac_script='s/[\\$]/&&/g;s/;s,x,x,$//'
 program_transform_name=`$as_echo "$program_transform_name" | sed "$ac_script"`
 
-# expand $ac_aux_dir to an absolute path
-am_aux_dir=`cd $ac_aux_dir && pwd`
+# Expand $ac_aux_dir to an absolute path.
+am_aux_dir=`cd "$ac_aux_dir" && pwd`
 
 if test x"${MISSING+set}" != xset; then
   case $am_aux_dir in
@@ -2005,7 +2009,7 @@ else
 $as_echo "$as_me: WARNING: 'missing' script is too old or missing" >&2;}
 fi
 
-if test x"${install_sh}" != xset; then
+if test x"${install_sh+set}" != xset; then
   case $am_aux_dir in
   *\ * | *\	*)
     install_sh="\${SHELL} '$am_aux_dir/install-sh'" ;;
@@ -2333,8 +2337,8 @@ MAKEINFO=${MAKEINFO-"${am_missing_run}makeinfo"}
 # <http://lists.gnu.org/archive/html/automake/2012-07/msg00014.html>
 mkdir_p='$(MKDIR_P)'
 
-# We need awk for the "check" target.  The system "awk" is bad on
-# some platforms.
+# We need awk for the "check" target (and possibly the TAP driver).  The
+# system "awk" is bad on some platforms.
 # Always define AMTAR for backward compatibility.  Yes, it's still used
 # in the wild :-(  We should find a proper way to deprecate it ...
 AMTAR='$${TAR-tar}'
@@ -2391,6 +2395,7 @@ END
     as_fn_error $? "Your 'rm' program is bad, sorry." "$LINENO" 5
   fi
 fi
+
 
 # Make sure we can run config.sub.
 $SHELL "$ac_aux_dir/config.sub" sun4 >/dev/null 2>&1 ||
@@ -2548,29 +2553,25 @@ else
   with_libraries=no
 fi
 
-case $with_libraries in #(
-  yes|all) :
+libraries="winpthreads mangle"
+case $host_cpu in #(
+  i?86) :
 
-    with_libraries="libmangle,pseh"
-    with_libraries_mangle=yes
-    with_libraries_pseh=yes ;; #(
-  libmangle) :
-
-    with_libraries="libmangle"
-    with_libraries_mangle=yes
-    with_libraries_pseh=no ;; #(
-  pseh) :
-
-    with_libraries="pseh"
-    with_libraries_mangle=no
-    with_libraries_pseh=yes ;; #(
-  no) :
-
-    with_libraries_mangle=no
-    with_libraries_pseh=no ;; #(
+    libraries="$libraries pseh"
+   ;; #(
   *) :
-    as_fn_error $? "Invalid argument to --with-libraries: $with_libraries" "$LINENO" 5 ;;
+     ;;
 esac
+for l in $libraries; do
+  res=`echo "$with_libraries" | grep $l > /dev/null && echo yes || echo no`
+  case $with_libraries in #(
+  all|yes) :
+    res=yes ;; #(
+  *) :
+     ;;
+esac
+    eval with_libraries_$l=\$res
+done
  if test "x$with_libraries_mangle" = xyes; then
   LIBRARIES_MANGLE_TRUE=
   LIBRARIES_MANGLE_FALSE='#'
@@ -2587,12 +2588,24 @@ else
   LIBRARIES_PSEH_FALSE=
 fi
 
+ if test "x$with_libraries_winpthreads" = xyes; then
+  LIBRARIES_WINPTHREADS_TRUE=
+  LIBRARIES_WINPTHREADS_FALSE='#'
+else
+  LIBRARIES_WINPTHREADS_TRUE='#'
+  LIBRARIES_WINPTHREADS_FALSE=
+fi
+
 if test -z "$LIBRARIES_MANGLE_TRUE"; then :
   subdirs="$subdirs mingw-w64-libraries/libmangle"
 
 fi
 if test -z "$LIBRARIES_PSEH_TRUE"; then :
   subdirs="$subdirs mingw-w64-libraries/pseh"
+
+fi
+if test -z "$LIBRARIES_WINPTHREADS_TRUE"; then :
+  subdirs="$subdirs mingw-w64-libraries/winpthreads"
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_libraries" >&5
@@ -2608,29 +2621,16 @@ else
   with_tools=no
 fi
 
-case $with_tools in #(
-  yes|all) :
-
-    with_tools="gendef,genidl"
-    with_tools_gendef=yes
-    with_tools_genidl=yes ;; #(
-  gendef) :
-
-    with_tools="gendef"
-    with_tools_gendef=yes
-    with_tools_genidl=no ;; #(
-  genidl) :
-
-    with_tools="genidl"
-    with_tools_gendef=no
-    with_tools_genidl=yes ;; #(
-  no) :
-
-    with_tools_gendef=no
-    with_tools_genidl=no ;; #(
+for t in gendef genidl; do
+  res=`echo "${with_tools}" | grep $t > /dev/null && echo yes || echo no`
+  case $with_tools in #(
+  all|yes) :
+    res=yes ;; #(
   *) :
-    as_fn_error $? "Invalid argument to --with-tools: $with_tools" "$LINENO" 5 ;;
+     ;;
 esac
+    eval with_tools_$t=\$res
+done
  if test "x$with_tools_gendef" = xyes; then
   TOOLS_GENDEF_TRUE=
   TOOLS_GENDEF_FALSE='#'
@@ -2796,6 +2796,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${LIBRARIES_PSEH_TRUE}" && test -z "${LIBRARIES_PSEH_FALSE}"; then
   as_fn_error $? "conditional \"LIBRARIES_PSEH\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${LIBRARIES_WINPTHREADS_TRUE}" && test -z "${LIBRARIES_WINPTHREADS_FALSE}"; then
+  as_fn_error $? "conditional \"LIBRARIES_WINPTHREADS\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${TOOLS_GENDEF_TRUE}" && test -z "${TOOLS_GENDEF_FALSE}"; then

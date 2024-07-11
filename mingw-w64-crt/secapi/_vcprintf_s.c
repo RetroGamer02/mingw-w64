@@ -2,9 +2,8 @@
 #include <malloc.h>
 #include <errno.h>
 #include <msvcrt.h>
+#include <sec_api/conio_s.h>
 
-int __cdecl _vcprintf (const char *, va_list);
-int __cdecl _vcprintf_s (const char *, va_list);
 static int __cdecl _int_vcprintf_s (const char *, va_list);
 static int __cdecl _stub (const char *, va_list);
 
